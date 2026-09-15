@@ -1,1 +1,84 @@
-
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#17130f">
+<title>Nothing at this hatch — The Little Hatch</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Work+Sans:wght@400;500;600;700&display=swap">
+<style>
+  :root{
+    --paper:#ffffff; --paper-3:#f1ece3;
+    --ink:#17130f; --ink-2:#55493a; --ink-3:#948877;
+    --line-strong:#cdc0a6;
+    --font-display:'Baloo 2', system-ui, sans-serif;
+    --font-body:'Work Sans', system-ui, -apple-system, sans-serif;
+    --ease-bounce:cubic-bezier(.34,1.56,.64,1);
+  }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0; min-height:100vh; background:var(--paper); color:var(--ink);
+    font-family:var(--font-body);
+    display:flex; align-items:center; justify-content:center; padding:24px 20px;
+  }
+  .wrap{ width:100%; max-width:440px; text-align:center; }
+  .hatch{
+    width:170px; height:118px; margin:0 auto 26px; position:relative;
+    border:3px solid var(--ink); border-radius:16px;
+    background:var(--paper-3); overflow:hidden;
+    animation:pop .5s var(--ease-bounce) both;
+  }
+  .shutter{
+    position:absolute; left:0; right:0; top:0; height:62%;
+    background:var(--ink); border-bottom:3px solid var(--ink);
+    border-radius:13px 13px 4px 4px;
+    animation:shut 2.6s ease-in-out infinite;
+  }
+  .shutter span{ position:absolute; left:10%; right:10%; height:2px; background:rgba(255,255,255,.22); }
+  .shutter span:nth-child(1){ top:22%; }
+  .shutter span:nth-child(2){ top:44%; }
+  .shutter span:nth-child(3){ top:66%; }
+  .ledge{ position:absolute; left:0; right:0; bottom:0; height:12px; background:var(--line-strong); }
+  .closed-sign{
+    position:absolute; left:50%; bottom:24px; transform:translateX(-50%);
+    font-family:var(--font-display); font-weight:800; font-size:12px; letter-spacing:.14em;
+    text-transform:uppercase; color:var(--ink-2);
+  }
+  h1{ margin:0 0 10px; font-family:var(--font-display); font-weight:800; font-size:clamp(30px,9vw,42px); line-height:1.08; }
+  .code{
+    display:inline-block; font-family:var(--font-display); font-weight:800; font-size:12px;
+    letter-spacing:.18em; text-transform:uppercase; color:var(--ink-3);
+    border:2px solid var(--line-strong); border-radius:999px; padding:4px 14px; margin-bottom:16px;
+  }
+  p{ margin:0 auto 26px; font-size:15.5px; color:var(--ink-2); max-width:330px; line-height:1.55; }
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center;
+    font-family:var(--font-body); font-weight:600; font-size:16px; cursor:pointer;
+    border-radius:999px; border:2.5px solid var(--ink); background:var(--ink); color:var(--paper);
+    padding:15px 30px; text-decoration:none;
+    transition:transform .18s var(--ease-bounce), opacity .15s ease;
+  }
+  .btn:active{ transform:scale(.94); }
+  .btn:hover{ opacity:.92; }
+  @keyframes pop{ from{ transform:scale(.9); opacity:0; } to{ transform:scale(1); opacity:1; } }
+  @keyframes shut{
+    0%,100%{ transform:translateY(0); }
+    45%,60%{ transform:translateY(-38%); }
+  }
+  @media (prefers-reduced-motion:reduce){ .hatch,.shutter{ animation:none; } }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hatch" role="img" aria-label="A closed serving hatch">
+      <div class="ledge"></div>
+      <div class="closed-sign">closed</div>
+      <div class="shutter"><span></span><span></span><span></span></div>
+    </div>
+    <div class="code">Error 404</div>
+    <h1>Nothing at this hatch</h1>
+    <p>This page doesn't exist — the shutter's down. Let's get you back to the menu.</p>
+    <a class="btn" href="/">Back to The Little Hatch</a>
+  </div>
+</body>
+</html>
