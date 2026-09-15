@@ -65,8 +65,11 @@
   .top-nav{ display:flex; align-items:center; justify-content:space-between; margin-bottom:22px; gap:12px; }
   .top-nav .brand{ display:flex; align-items:center; gap:8px; cursor:pointer; }
   .brand-logo{ height:36px; width:auto; display:block; }
-  .hero-logo{ max-width:300px; width:78%; margin:0 auto 4px; display:block; }
-  .hero-badge{ width:104px; margin:14px auto 0; display:block; border-radius:14px; }
+  .hero-logo{ max-width:300px; width:78%; margin:0 auto 18px; display:block; }
+  .landing-stack{ margin-top:7vh; gap:30px; }
+  .landing-hero{ margin-bottom:2px; }
+  .landing-tagline{ max-width:23ch; margin:0 auto; line-height:1.5; }
+  .hero-badge{  .hero-badge{ width:104px; margin:14px auto 0; display:block; border-radius:14px; }
 
   .staff-bar{ background:var(--ink); margin:-24px -20px 24px; padding:18px 20px; border-radius:0 0 28px 28px; }
   .staff-bar .btn{ border-color:var(--paper); color:var(--paper); }
@@ -152,7 +155,7 @@
   .qty-ctrl .n{ min-width:18px; text-align:center; font-family:var(--font-display); font-weight:700; font-size:16px; transition:transform .25s var(--ease-bounce); }
   .qty-pop{ animation:qtyPop .3s var(--ease-bounce); }
   @keyframes qtyPop{ 0%{transform:scale(1.5);} 100%{transform:scale(1);} }
-  .topping-row{ display:flex; gap:6px; flex-wrap:wrap; padding:0 4px 12px; border-bottom:1px solid var(--line); }
+  .topping-row{ display:flex; gap:6px; flex-wrap:wrap; justify-content:center; padding:0 4px 12px; border-bottom:1px solid var(--line); }
   .topping-chip{ flex:0 0 auto; max-width:100%; font-size:11.5px; font-weight:600; padding:5px 10px; border-radius:999px; border:1.5px dashed var(--line-strong); background:var(--paper); cursor:pointer; transition:transform .15s var(--ease-bounce); white-space:nowrap; }
   .topping-chip:active{ transform:scale(.9); }
 
@@ -292,6 +295,34 @@
     .cols{ grid-template-columns:1fr; }
     .stat-row{ gap:8px; }
     .modal-card{ padding:18px; }
+  }
+
+  /* ---------------------------- boot splash ---------------------------- */
+  #lh-boot{
+    position:fixed; inset:0; z-index:80; background:var(--paper);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px;
+    transition:opacity .4s ease, visibility .4s ease;
+  }
+  #lh-boot.gone{ opacity:0; visibility:hidden; }
+  .lh-boot-logo{ width:min(52vw,210px); height:auto; animation:lhBootPop .5s var(--ease-bounce) both; }
+  .lh-boot-steam{ display:flex; gap:7px; height:26px; align-items:flex-end; }
+  .lh-boot-steam span{
+    width:7px; height:7px; border-radius:50%; background:var(--ink);
+    animation:lhSteam 1.25s ease-in-out infinite;
+  }
+  .lh-boot-steam span:nth-child(2){ animation-delay:.16s; }
+  .lh-boot-steam span:nth-child(3){ animation-delay:.32s; }
+  .lh-boot-word{
+    font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:.16em;
+    color:var(--ink-3);
+  }
+  @keyframes lhBootPop{ from{ transform:scale(.88); opacity:0; } to{ transform:scale(1); opacity:1; } }
+  @keyframes lhSteam{
+    0%,100%{ transform:translateY(0) scale(1); opacity:.35; }
+    50%{ transform:translateY(-11px) scale(1.25); opacity:1; }
+  }
+  @media (prefers-reduced-motion:reduce){
+    .lh-boot-logo,.lh-boot-steam span{ animation:none; }
   }
 
 </style>
@@ -480,11 +511,11 @@
 
   async function initSupabase(){
     try{
-      if (!window.supabase || SUPABASE_URL.indexOf('YOUR-PROJECT')!==-1){ connectError = true; render(); return; }
+      if (!window.supabase || SUPABASE_URL.indexOf('YOUR-PROJECT')!==-1){ connectError = true; render(); if (window.__lhHideBoot) window.__lhHideBoot(); return; }
       sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
       await loadAll();
       subscribeRealtime();
-    }catch(e){ console.error(e); connectError = true; render(); }
+    }catch(e){ console.error(e); connectError = true; render(); if (window.__lhHideBoot) window.__lhHideBoot(); }
   }
 
   async function loadAll(){
@@ -510,6 +541,7 @@
     if (!state.activeCategory && menuItems.length) state.activeCategory = menuItems[0].category;
     handleOrderAlerts();
     render();
+    if (window.__lhHideBoot) window.__lhHideBoot();
   }
 
   function upsertOrderLocal(row){
@@ -1043,15 +1075,14 @@
       ).join('') + '</div>';
     }
     return topNav() +
-      '<div class="stack" style="margin-top:5vh;">' +
-        '<div class="center">' +
+      '<div class="stack landing-stack">' +
+        '<div class="center landing-hero">' +
           '<img src="'+LOGO_BLACK+'" alt="The Little Hatch" class="hero-logo">' +
-          '<div class="tagline">Order ahead, we\'ll bring it to your collection point.</div>' +
+          '<div class="tagline landing-tagline">Order ahead, we\'ll bring it to your collection point.</div>' +
         '</div>' +
         trackBlock +
         '<button class="btn btn-primary btn-lg btn-block" data-action="go-dropoff">Order for collection</button>' +
-      '</div>' +
-      '<div class="stealth-link" tabindex="0" role="button" aria-label="Staff sign in" data-action="go-staff">staff</div>';
+      '</div>';
   }
 
   function renderDropoff(){
@@ -1786,7 +1817,35 @@
   installPwaTags();
   ensureServiceWorker();
 
-  if (location.hash === '#staff') state.view = 'staffLogin';
+  // Branded splash while we connect to the database, so the first paint isn't
+  // a half-empty menu. Removed as soon as the first real data lands.
+  function showBootSplash(){
+    if (document.getElementById('lh-boot')) return;
+    const el = document.createElement('div');
+    el.id = 'lh-boot';
+    el.innerHTML =
+      '<img src="'+LOGO_BLACK+'" alt="The Little Hatch" class="lh-boot-logo">' +
+      '<div class="lh-boot-steam"><span></span><span></span><span></span></div>' +
+      '<div class="lh-boot-word">warming up</div>';
+    document.body.appendChild(el);
+  }
+  function hideBootSplash(){
+    const el = document.getElementById('lh-boot');
+    if (!el) return;
+    el.classList.add('gone');
+    setTimeout(()=>{ el.remove(); }, 420);
+  }
+  window.__lhHideBoot = hideBootSplash;
+  showBootSplash();
+  // Never let the splash trap someone if the network is having a bad day.
+  setTimeout(hideBootSplash, 6000);
+
+  // The staff board lives on its own quiet URL rather than a link on the
+  // landing page. The PIN is still what actually guards it.
+  const lhPath = location.pathname.toLowerCase();
+  if (location.hash === '#staff' || lhPath.indexOf('staff-for-the-hatch') !== -1){
+    state.view = 'staffLogin';
+  }
   render(true);
   initSupabase();
 
