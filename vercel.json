@@ -1,1 +1,6 @@
-
+{
+  "rewrites": [
+    { "source": "/staff-for-the-hatch.html", "destination": "/index.html" },
+    { "source": "/staff-for-the-hatch", "destination": "/index.html" }
+  ]
+}
