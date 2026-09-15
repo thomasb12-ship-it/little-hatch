@@ -1,0 +1,11 @@
+{
+  "name": "The Little Hatch",
+  "short_name": "Little Hatch",
+  "description": "Order ahead from The Little Hatch and we'll bring it to your collection point.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#faf7f2",
+  "theme_color": "#17130f",
+  "orientation": "portrait"
+}
