@@ -325,6 +325,39 @@
     .lh-boot-logo,.lh-boot-steam span{ animation:none; }
   }
 
+  .delivery-cup{ display:inline-flex; flex-direction:column; align-items:center; margin:18px 0 2px; }
+  .delivery-cup-steam{ display:flex; gap:6px; height:20px; align-items:flex-end; margin-bottom:4px; }
+  .delivery-cup-steam span{
+    width:5px; height:5px; border-radius:50%; background:var(--ink-3);
+    animation:cupSteam 1.4s ease-in-out infinite;
+  }
+  .delivery-cup-steam span:nth-child(2){ animation-delay:.18s; }
+  .delivery-cup-steam span:nth-child(3){ animation-delay:.36s; }
+  .delivery-cup-body{
+    position:relative; width:52px; height:40px; background:var(--ink);
+    border-radius:6px 6px 16px 16px; animation:cupWobble 2.4s ease-in-out infinite;
+  }
+  .delivery-cup-body::before{
+    content:''; position:absolute; left:5px; right:5px; top:-5px; height:6px;
+    background:var(--paper-3); border-radius:3px;
+  }
+  .delivery-cup-handle{
+    position:absolute; right:-13px; top:9px; width:14px; height:18px;
+    border:5px solid var(--ink); border-left:none; border-radius:0 10px 10px 0;
+  }
+  @keyframes cupSteam{
+    0%,100%{ transform:translateY(0) scale(1); opacity:.35; }
+    50%{ transform:translateY(-9px) scale(1.2); opacity:1; }
+  }
+  @keyframes cupWobble{
+    0%,100%{ transform:translateX(0) rotate(0deg); }
+    25%{ transform:translateX(-3px) rotate(-3deg); }
+    75%{ transform:translateX(3px) rotate(3deg); }
+  }
+  @media (prefers-reduced-motion:reduce){
+    .delivery-cup-steam span, .delivery-cup-body{ animation:none; }
+  }
+
 </style>
 
 <div id="toast-stack" aria-live="polite"></div>
@@ -1154,6 +1187,7 @@
             '<div class="row between"><strong>Total</strong><strong class="mono">'+money(cartTotal())+'</strong></div>' +
           '</div>' +
           (cartTotal() > 0 && cartTotal() < 1 ? '<div class="error-text center" style="margin-top:14px;">Card payments need a £1 minimum — please bring cash for this order.</div>' : '') +
+          '<p class="tagline center" style="margin-top:14px;">Paying by cash? We don\'t carry change, so please bring the exact amount.</p>' +
           '<div class="note-field" style="margin-top:16px;">' +
             '<label for="order-comment-input">Note for the team (optional)</label>' +
             '<textarea id="order-comment-input" maxlength="200" placeholder="e.g. extra milk in the coffee">'+escapeHtml(state.orderComment||'')+'</textarea>' +
@@ -1176,6 +1210,15 @@
     const tb = timerBlock(order, info);
     const courierLine = (order.status==='delivering' && order.courierName)
       ? '<div class="center tagline" style="margin-top:-8px;margin-bottom:10px;">Being brought to you by <strong>'+escapeHtml(order.courierName)+'</strong></div>' : '';
+    const deliveryCup = (order.status==='delivering')
+      ? '<div class="center">' +
+          '<div class="delivery-cup" aria-hidden="true">' +
+            '<div class="delivery-cup-steam"><span></span><span></span><span></span></div>' +
+            '<div class="delivery-cup-body"><div class="delivery-cup-handle"></div></div>' +
+          '</div>' +
+          '<div class="tagline" style="margin-top:2px;">On its way to you...</div>' +
+        '</div>'
+      : '';
 
     const notifBtn = window.Notification
       ? '<button class="btn btn-sm '+(state.notifyReady?'chip filled':'')+'" data-action="enable-order-notifs">'+(state.notifyReady?'Notifying you of updates ✓ (tap to turn off)':'Notify me of updates')+'</button>'
@@ -1199,6 +1242,7 @@
         '</div>' +
         waitStepper(order.status) +
         courierLine +
+        deliveryCup +
         '<div class="stat-row">' +
           '<div class="stat-tile"><div class="num">'+ (order.status==='received' ? info.ahead : 0) +'</div><div class="label">Ahead of you</div></div>' +
           '<div class="stat-tile"><div class="num">'+order.items.reduce((s,i)=>s+i.qty,0)+'</div><div class="label">Items</div></div>' +
