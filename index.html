@@ -812,6 +812,10 @@
   function go(view, extra){
     Object.assign(state, extra||{});
     state.view = view;
+    if (view==='menu'){
+      const cats = sortCategories([...new Set(menuItems.map(m=>m.category))]);
+      if (cats.length) state.activeCategory = cats[0];
+    }
     render(true);
     window.scrollTo({top:0, behavior:'auto'});
     // Landing on the staff board (including a session resumed from
