@@ -65,6 +65,10 @@
   .top-nav{ display:flex; align-items:center; justify-content:space-between; margin-bottom:22px; gap:12px; }
   .top-nav .brand{ display:flex; align-items:center; gap:8px; cursor:pointer; }
   .brand-logo{ height:36px; width:auto; display:block; }
+  #app.fade-in .brand-logo{ animation:lhBootPop .5s var(--ease-bounce) both; }
+  @media (prefers-reduced-motion:reduce){
+    #app.fade-in .brand-logo{ animation:none; }
+  }
   .hero-logo{ max-width:300px; width:78%; margin:0 auto 18px; display:block; }
   .landing-stack{ margin-top:7vh; gap:30px; }
   .landing-hero{ margin-bottom:2px; }
@@ -94,7 +98,13 @@
   .btn[disabled]{ opacity:.35; cursor:not-allowed; }
   .btn .pop{ position:absolute; font-family:var(--font-display); font-weight:700; font-size:13px; pointer-events:none; animation:popUp .7s ease-out forwards; }
   @keyframes popUp{ 0%{ opacity:1; transform:translateY(0) scale(1);} 100%{ opacity:0; transform:translateY(-34px) scale(1.3);} }
-  .icon-btn{ border:2px solid var(--line-strong); background:var(--paper-2); border-radius:50%; width:36px; height:36px; display:inline-flex; align-items:center; justify-content:center; font-size:17px; font-weight:700; cursor:pointer; transition:transform .18s var(--ease-bounce); }
+  .icon-btn{
+    -webkit-appearance:none; appearance:none; border:2px solid var(--line-strong); background:var(--paper-2);
+    border-radius:50%; width:36px; height:36px; padding:0; display:inline-flex; align-items:center; justify-content:center;
+    font-family:var(--font-body); font-size:17px; line-height:1; font-weight:700; color:var(--ink); cursor:pointer;
+    transition:transform .18s var(--ease-bounce);
+  }
+  .icon-btn svg{ display:block; }
   .icon-btn:active{ transform:scale(.85) rotate(-4deg); }
 
   .ticket{ position:relative; background:var(--paper-2); border:2.5px solid var(--line); border-radius:var(--radius-l); padding:24px; box-shadow:0 4px 0 var(--shadow); }
@@ -155,8 +165,13 @@
   .qty-ctrl .n{ min-width:18px; text-align:center; font-family:var(--font-display); font-weight:700; font-size:16px; transition:transform .25s var(--ease-bounce); }
   .qty-pop{ animation:qtyPop .3s var(--ease-bounce); }
   @keyframes qtyPop{ 0%{transform:scale(1.5);} 100%{transform:scale(1);} }
-  .topping-row{ display:flex; gap:6px; flex-wrap:wrap; justify-content:center; padding:0 4px 12px; border-bottom:1px solid var(--line); }
-  .topping-chip{ flex:0 0 auto; max-width:100%; font-size:11.5px; font-weight:600; padding:5px 10px; border-radius:999px; border:1.5px dashed var(--line-strong); background:var(--paper); cursor:pointer; transition:transform .15s var(--ease-bounce); white-space:nowrap; }
+  .topping-row{ display:flex; gap:6px; flex-wrap:wrap; align-items:center; justify-content:flex-start; padding:0 4px 12px; border-bottom:1px solid var(--line); }
+  .topping-chip{
+    -webkit-appearance:none; appearance:none; flex:0 0 auto; max-width:100%;
+    font-family:var(--font-body); font-size:11.5px; font-weight:600; padding:5px 10px;
+    border-radius:999px; border:1.5px dashed var(--line-strong); background:var(--paper);
+    color:var(--ink); cursor:pointer; transition:transform .15s var(--ease-bounce); white-space:nowrap;
+  }
   .topping-chip:active{ transform:scale(.9); }
 
   .basket-bar{ position:sticky; bottom:14px; margin-top:18px; background:var(--ink); color:var(--paper); border-radius:999px; padding:14px 20px; display:flex; align-items:center; justify-content:space-between; box-shadow:0 8px 22px var(--shadow); transition:transform .3s var(--ease-bounce); }
@@ -176,6 +191,7 @@
   .dash-header{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:18px; flex-wrap:wrap; }
   .chip{ font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; border:2px solid var(--line-strong); border-radius:999px; padding:3px 11px; }
   .chip.filled{ background:var(--ink); color:var(--paper); border-color:var(--ink); }
+  .deliver-timer{ font-variant-numeric:tabular-nums; }
   .cols{ display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:16px; align-items:start; }
   .col{ background:var(--paper-3); border:2px solid var(--line); border-radius:var(--radius-l); padding:14px; min-height:120px; }
   .col-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
@@ -190,7 +206,7 @@
   .waited{ font-size:11.5px; color:var(--ink-3); }
 
   .mode-switch{ display:flex; gap:8px; margin-bottom:18px; flex-wrap:wrap; }
-  .mode-pill{ padding:9px 16px; border-radius:999px; border:2px solid var(--line-strong); font-size:13px; font-weight:700; cursor:pointer; background:var(--paper); transition:transform .15s var(--ease-bounce); }
+  .mode-pill{ -webkit-appearance:none; appearance:none; font-family:var(--font-body); padding:9px 16px; border-radius:999px; border:2px solid var(--line-strong); font-size:13px; font-weight:700; color:var(--ink); cursor:pointer; background:var(--paper); transition:transform .15s var(--ease-bounce); }
   .mode-pill.active{ background:var(--ink); color:var(--paper); border-color:var(--ink); }
   .mode-pill:active{ transform:scale(.92); }
 
@@ -209,7 +225,7 @@
   .team-table tr:last-child td{ border-bottom:none; }
   .team-table th:first-child, .team-table td.team-name-cell{ width:auto; }
   .team-table th:nth-child(2), .team-table td:nth-child(2){ width:56px; }
-  .team-table th:last-child, .team-table td:last-child{ width:70px; padding-right:0; }
+  .team-table th:last-child, .team-table td:last-child{ width:118px; padding-right:0; }
   .team-table td.team-name-cell{ word-break:break-word; line-height:1.5; }
   .team-table .chip{ font-size:9.5px; padding:2px 7px; margin-left:2px; white-space:nowrap; }
   .timing-msgroup{ display:flex; align-items:center; gap:4px; flex:0 0 auto; }
@@ -245,6 +261,7 @@
 
   .verify-label{ font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.14em; color:var(--ink-3); }
   .verify-code-big{ font-family:var(--font-display); font-weight:800; font-size:clamp(38px,13vw,58px); letter-spacing:.06em; color:var(--ink); line-height:1.15; white-space:nowrap; }
+  .verify-code-mid{ font-family:var(--font-display); font-weight:800; font-size:clamp(28px,9vw,38px); letter-spacing:.06em; color:var(--ink); line-height:1.15; white-space:nowrap; }
   .verify-chip{ font-family:var(--font-display); font-weight:700; letter-spacing:.08em; background:var(--paper); border:1.5px dashed var(--line-strong); border-radius:999px; padding:1px 8px; font-size:10.5px; }
 
   .dropoff-tabs{ display:flex; gap:8px; overflow-x:auto; margin-bottom:16px; }
@@ -325,38 +342,6 @@
     .lh-boot-logo,.lh-boot-steam span{ animation:none; }
   }
 
-  .delivery-cup{ display:inline-flex; flex-direction:column; align-items:center; margin:18px 0 2px; }
-  .delivery-cup-steam{ display:flex; gap:6px; height:20px; align-items:flex-end; margin-bottom:4px; }
-  .delivery-cup-steam span{
-    width:5px; height:5px; border-radius:50%; background:var(--ink-3);
-    animation:cupSteam 1.4s ease-in-out infinite;
-  }
-  .delivery-cup-steam span:nth-child(2){ animation-delay:.18s; }
-  .delivery-cup-steam span:nth-child(3){ animation-delay:.36s; }
-  .delivery-cup-body{
-    position:relative; width:52px; height:40px; background:var(--ink);
-    border-radius:6px 6px 16px 16px; animation:cupWobble 2.4s ease-in-out infinite;
-  }
-  .delivery-cup-body::before{
-    content:''; position:absolute; left:5px; right:5px; top:-5px; height:6px;
-    background:var(--paper-3); border-radius:3px;
-  }
-  .delivery-cup-handle{
-    position:absolute; right:-13px; top:9px; width:14px; height:18px;
-    border:5px solid var(--ink); border-left:none; border-radius:0 10px 10px 0;
-  }
-  @keyframes cupSteam{
-    0%,100%{ transform:translateY(0) scale(1); opacity:.35; }
-    50%{ transform:translateY(-9px) scale(1.2); opacity:1; }
-  }
-  @keyframes cupWobble{
-    0%,100%{ transform:translateX(0) rotate(0deg); }
-    25%{ transform:translateX(-3px) rotate(-3deg); }
-    75%{ transform:translateX(3px) rotate(3deg); }
-  }
-  @media (prefers-reduced-motion:reduce){
-    .delivery-cup-steam span, .delivery-cup-body{ animation:none; }
-  }
 
 </style>
 
@@ -477,6 +462,8 @@
   let deliveryPoints = []; // [{dropOff, minutes}]
 
   const EYE_OPEN = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+  const ICON_PLUS = '<svg viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 1V13M1 7H13"/></svg>';
+  const ICON_MINUS = '<svg viewBox="0 0 14 14" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 7H13"/></svg>';
   const EYE_OFF = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a20.42 20.42 0 0 1 5.06-6.06M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a20.42 20.42 0 0 1-3.22 4.44M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
 
   try{
@@ -956,6 +943,17 @@
     const { error } = await sb.rpc('set_staff_active', { p_target_id:id, p_active: !current, p_admin_pin_hash: state.staff.pinHash });
     if (!error) { await refreshStaffList(); render(); }
   }
+  async function deleteStaffAccount(id, name){
+    if (!window.confirm('Remove '+name+' from the team? This can\'t be undone.')) return;
+    const { error } = await sb.rpc('delete_staff_account', { p_target_id:id, p_admin_pin_hash: state.staff.pinHash });
+    if (error){
+      toast(/last admin|yourself/i.test(error.message||'') ? error.message : 'Could not remove that teammate — try again.');
+      return;
+    }
+    await refreshStaffList();
+    toast(name+' removed from the team');
+    render();
+  }
   async function changeOwnPin(oldPin, newPin){
     if (!oldPin || !newPin){ state.pinActionError = 'Enter both your current and new PIN.'; render(); return; }
     const oldHash = await sha256Hex(oldPin);
@@ -1107,8 +1105,7 @@
         '<button class="btn btn-primary" style="font-size:'+fontSize+'px;" data-action="go-status" data-id="'+o.id+'">#'+o.number+' · Pt '+o.dropOff+'</button>'
       ).join('') + '</div>';
     }
-    return topNav() +
-      '<div class="stack landing-stack">' +
+    return '<div class="stack landing-stack">' +
         '<div class="center landing-hero">' +
           '<img src="'+LOGO_BLACK+'" alt="The Little Hatch" class="hero-logo">' +
           '<div class="tagline landing-tagline">Order ahead, we\'ll bring it to your collection point.</div>' +
@@ -1139,7 +1136,7 @@
     let html = '<div class="menu-item'+(hasT?' has-toppings':'')+'">' +
       '<div class="grow"><div class="name">'+escapeHtml(item.name)+'</div><div class="price">'+money(item.price)+'</div></div>' +
       (qty>0
-        ? '<div class="qty-ctrl"><button class="icon-btn" data-action="cart-minus" data-id="'+item.id+'">−</button><span class="n" id="qn-'+item.id+'">'+qty+'</span><button class="icon-btn" data-action="cart-plus" data-id="'+item.id+'">+</button></div>'
+        ? '<div class="qty-ctrl"><button class="icon-btn" data-action="cart-minus" data-id="'+item.id+'">'+ICON_MINUS+'</button><span class="n" id="qn-'+item.id+'">'+qty+'</span><button class="icon-btn" data-action="cart-plus" data-id="'+item.id+'">'+ICON_PLUS+'</button></div>'
         : '<button class="btn btn-sm" data-action="cart-plus" data-id="'+item.id+'">Add</button>') +
       '</div>';
     if (hasT){
@@ -1180,14 +1177,14 @@
           '<div class="ticket" style="margin-top:16px;">' +
             state.cart.map(i=>
               '<div class="basket-line"><div class="grow"><div class="name">'+escapeHtml(i.name)+'</div><div class="sub">'+money(i.price)+' each</div></div>' +
-              '<div class="qty-ctrl"><button class="icon-btn" data-action="cart-minus" data-id="'+i.id+'">−</button><span class="n">'+i.qty+'</span><button class="icon-btn" data-action="cart-plus-raw" data-id="'+i.id+'" data-name="'+escapeHtml(i.name)+'" data-price="'+i.price+'">+</button></div>' +
+              '<div class="qty-ctrl"><button class="icon-btn" data-action="cart-minus" data-id="'+i.id+'">'+ICON_MINUS+'</button><span class="n" id="qn-'+i.id+'">'+i.qty+'</span><button class="icon-btn" data-action="cart-plus-raw" data-id="'+i.id+'" data-name="'+escapeHtml(i.name)+'" data-price="'+i.price+'">'+ICON_PLUS+'</button></div>' +
               '<div class="mono" style="min-width:56px;text-align:right;">'+money(i.price*i.qty)+'</div></div>'
             ).join('') +
             '<div class="ticket-perf"></div>' +
             '<div class="row between"><strong>Total</strong><strong class="mono">'+money(cartTotal())+'</strong></div>' +
           '</div>' +
           (cartTotal() > 0 && cartTotal() < 1 ? '<div class="error-text center" style="margin-top:14px;">Card payments need a £1 minimum — please bring cash for this order.</div>' : '') +
-          '<p class="tagline center" style="margin-top:14px;">Paying by cash? We don\'t carry change, so please bring the exact amount.</p>' +
+          '<p class="tagline center" style="margin-top:14px;">Paying by cash? Sorry, we don\'t carry change, so please bring the exact amount.</p>' +
           '<div class="note-field" style="margin-top:16px;">' +
             '<label for="order-comment-input">Note for the team (optional)</label>' +
             '<textarea id="order-comment-input" maxlength="200" placeholder="e.g. extra milk in the coffee">'+escapeHtml(state.orderComment||'')+'</textarea>' +
@@ -1210,15 +1207,6 @@
     const tb = timerBlock(order, info);
     const courierLine = (order.status==='delivering' && order.courierName)
       ? '<div class="center tagline" style="margin-top:-8px;margin-bottom:10px;">Being brought to you by <strong>'+escapeHtml(order.courierName)+'</strong></div>' : '';
-    const deliveryCup = (order.status==='delivering')
-      ? '<div class="center">' +
-          '<div class="delivery-cup" aria-hidden="true">' +
-            '<div class="delivery-cup-steam"><span></span><span></span><span></span></div>' +
-            '<div class="delivery-cup-body"><div class="delivery-cup-handle"></div></div>' +
-          '</div>' +
-          '<div class="tagline" style="margin-top:2px;">On its way to you...</div>' +
-        '</div>'
-      : '';
 
     const notifBtn = window.Notification
       ? '<button class="btn btn-sm '+(state.notifyReady?'chip filled':'')+'" data-action="enable-order-notifs">'+(state.notifyReady?'Notifying you of updates ✓ (tap to turn off)':'Notify me of updates')+'</button>'
@@ -1242,7 +1230,6 @@
         '</div>' +
         waitStepper(order.status) +
         courierLine +
-        deliveryCup +
         '<div class="stat-row">' +
           '<div class="stat-tile"><div class="num">'+ (order.status==='received' ? info.ahead : 0) +'</div><div class="label">Ahead of you</div></div>' +
           '<div class="stat-tile"><div class="num">'+order.items.reduce((s,i)=>s+i.qty,0)+'</div><div class="label">Items</div></div>' +
@@ -1289,9 +1276,12 @@
     const itemsText = order.items.map(i=>i.qty+'× '+escapeHtml(i.name)).join(', ');
     const itemCount = order.items.reduce((s,i)=>s+i.qty,0);
     const isLong = itemsText.length > 70 || order.items.length > 4 || (order.comment && order.comment.length > 60);
+    const deliverTimer = (order.status==='delivering')
+      ? '<span class="chip filled deliver-timer" id="dtimer-'+order.id+'">'+formatCountdown(etaInfo(order).ms)+'</span>'
+      : '';
     return '<div class="ticket-mini" data-action="view-order" data-id="'+order.id+'">' +
       '<div class="row between"><span class="order-num">#'+order.number+'</span><span class="row" style="gap:6px;">'+
-        '<span class="chip">Point '+order.dropOff+'</span>'+(order.verifyCode?'<span class="verify-chip">'+order.verifyCode+'</span>':'')+
+        '<span class="chip">Point '+order.dropOff+'</span>'+(order.verifyCode?'<span class="verify-chip">'+order.verifyCode+'</span>':'')+deliverTimer+
       '</span></div>' +
       '<div class="order-meta">'+itemCount+' item'+(itemCount>1?'s':'')+' · '+money(order.total)+' · <span class="waited">'+timeSince(order.createdAt)+'</span></div>' +
       '<div class="order-items'+(isLong?' clamped':'')+'">' + itemsText + '</div>' +
@@ -1311,9 +1301,9 @@
         '<div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:14px;">' +
           '<span class="chip filled">'+escapeHtml(stageLabel)+'</span>' +
           '<span class="chip">Point '+order.dropOff+'</span>' +
-          (order.verifyCode ? '<span class="verify-chip">'+order.verifyCode+'</span>' : '') +
           (order.courierName ? '<span class="chip">Courier: '+escapeHtml(order.courierName)+'</span>' : '') +
         '</div>' +
+        (order.verifyCode ? '<div class="center" style="margin-bottom:14px;"><div class="verify-label">Customer code</div><div class="verify-code-mid mono">'+order.verifyCode+'</div></div>' : '') +
         (order.comment ? '<div class="order-note order-note-big"><span class="order-note-label">Customer note</span>'+escapeHtml(order.comment)+'</div>' : '') +
         '<div class="stack" style="gap:8px;margin:14px 0;">' + order.items.map(i=>
           '<div class="row between" style="font-size:15px;"><span>'+i.qty+' × '+escapeHtml(i.name)+'</span><span class="mono">'+money(i.price*i.qty)+'</span></div>'
@@ -1493,7 +1483,12 @@
       const isMe = s.id === meId;
       const action = isMe
         ? '<button class="btn btn-sm" data-action="show-change-pin" data-id="'+s.id+'">Change</button>'
-        : '<button class="btn btn-sm" data-action="show-reset-pin" data-id="'+s.id+'">Reset</button>';
+        : (
+            '<div class="row" style="gap:4px;flex-wrap:nowrap;">' +
+              '<button class="btn btn-sm" data-action="show-reset-pin" data-id="'+s.id+'">Reset</button>' +
+              '<button class="icon-btn" style="width:30px;height:30px;flex:0 0 auto;" data-action="delete-staff" data-id="'+s.id+'" data-name="'+escapeHtml(s.name)+'" title="Delete teammate">×</button>' +
+            '</div>'
+          );
       return '<tr>' +
         '<td class="team-name-cell">'+escapeHtml(s.name)+
           (isMe?' <span class="chip">You</span>':'')+
@@ -1666,6 +1661,7 @@
       }
       case 'cart-plus-raw':
         addToCart({ id:btn.dataset.id, name:btn.dataset.name, price:parseFloat(btn.dataset.price) });
+        popQty(btn.dataset.id);
         break;
       case 'cart-plus-topping': {
         const base = menuItems.find(m=>m.id===btn.dataset.base);
@@ -1684,6 +1680,7 @@
           setTimeout(()=>removeFromCart(id), 220);
         } else {
           removeFromCart(id);
+          popQty(id);
         }
         break;
       }
@@ -1772,6 +1769,7 @@
         toggleStaffActive(id, current);
         break;
       }
+      case 'delete-staff': deleteStaffAccount(btn.dataset.id, btn.dataset.name); break;
       case 'show-add-staff': state.addingStaff = true; state.addStaffError = null; render(); break;
       case 'cancel-add-staff': state.addingStaff = false; state.addStaffError = null; render(); break;
       case 'show-change-pin': state.pinAction = { id: btn.dataset.id, mode:'self' }; state.pinActionError = null; render(); break;
@@ -1824,6 +1822,12 @@
         const el = document.getElementById('lh-timer');
         if (el) el.textContent = timerBlock(order).big;
       }
+    }
+    if (state.view==='staffBoard'){
+      orders.filter(o=>o.status==='delivering').forEach(o=>{
+        const el = document.getElementById('dtimer-'+o.id);
+        if (el) el.textContent = formatCountdown(etaInfo(o).ms);
+      });
     }
   }, 1000);
 
