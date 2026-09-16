@@ -110,7 +110,7 @@
   .ticket::before,.ticket::after{ content:""; position:absolute; top:50%; width:20px; height:20px; background:var(--paper); border:2.5px solid var(--line); border-radius:50%; transform:translateY(-50%); }
   .ticket::before{ left:-11px; } .ticket::after{ right:-11px; }
   .ticket-perf{ border-top:3px dashed var(--line-strong); margin:16px 0; }
-  .ticket-mini{ background:var(--paper-2); border:2px solid var(--line); border-radius:var(--radius-m); padding:14px 16px; transition:transform .3s var(--ease-bounce); }
+  .ticket-mini{ background:var(--paper-2); border:2px solid var(--line); border-radius:var(--radius-m); padding:14px 16px; transition:transform .3s var(--ease-bounce); min-width:0; max-width:100%; overflow-wrap:anywhere; }
 
   .stat-row{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
   .stat-tile{ background:var(--paper); border:2px solid var(--line); border-radius:var(--radius-m); padding:12px 14px; text-align:center; }
@@ -195,7 +195,7 @@
   .chip.filled{ background:var(--ink); color:var(--paper); border-color:var(--ink); }
   .deliver-timer{ font-variant-numeric:tabular-nums; }
   .cols{ display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:16px; align-items:start; }
-  .col{ background:var(--paper-3); border:2px solid var(--line); border-radius:var(--radius-l); padding:14px; min-height:120px; }
+  .col{ background:var(--paper-3); border:2px solid var(--line); border-radius:var(--radius-l); padding:14px; min-height:120px; min-width:0; }
   .col-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
   .col-head h3{ font-size:14px; text-transform:uppercase; letter-spacing:.04em; font-family:var(--font-body); }
   .col .stack{ gap:10px; }
@@ -227,7 +227,7 @@
   .team-table tr:last-child td{ border-bottom:none; }
   .team-table th:first-child, .team-table td.team-name-cell{ width:auto; }
   .team-table th:nth-child(2), .team-table td:nth-child(2){ width:56px; }
-  .team-table th:last-child, .team-table td:last-child{ width:118px; padding-right:0; }
+  .team-table th:last-child, .team-table td:last-child{ width:156px; padding-right:0; }
   .team-table td.team-name-cell{ word-break:break-word; line-height:1.5; }
   .team-table .chip{ font-size:9.5px; padding:2px 7px; margin-left:2px; white-space:nowrap; }
   .timing-msgroup{ display:flex; align-items:center; gap:4px; flex:0 0 auto; }
@@ -239,6 +239,15 @@
   .switch.on{ background:var(--ink); }
   .switch .knob{ position:absolute; top:2px; left:2px; width:18px; height:18px; border-radius:50%; background:var(--ink); transition:transform .25s var(--ease-bounce); }
   .switch.on .knob{ background:var(--paper); transform:translateX(18px); }
+  .switch.lg{ width:60px; height:34px; border-color:currentColor; }
+  .switch.lg .knob{ width:26px; height:26px; background:currentColor; }
+  .switch.lg.on .knob{ transform:translateX(26px); }
+  .shop-status-bar{ display:flex; align-items:center; justify-content:space-between; gap:14px; padding:16px 18px; border-radius:var(--radius-m); margin-bottom:18px; border:2.5px solid; }
+  .shop-status-bar.open{ background:#eef7ee; border-color:#2f7a3c; color:#1f5c2a; }
+  .shop-status-bar.closed{ background:#fbeceb; border-color:#b8362a; color:#8c2a20; }
+  .shop-status-label{ font-family:var(--font-display); font-weight:700; font-size:17px; }
+  .shop-status-bar.open .switch.lg{ background:#2f7a3c; }
+  .shop-status-bar.closed .switch.lg{ background:transparent; }
   .pace-row{ display:flex; align-items:center; gap:10px; padding:12px 0; flex-wrap:wrap; }
   .pace-row input{ width:90px; }
   .pace-row select{ font-family:var(--font-body); font-size:16px; padding:13px 15px; border-radius:var(--radius-s); border:2.5px solid var(--line-strong); background:var(--paper); color:var(--ink); }
@@ -249,6 +258,12 @@
   .menu-admin-row.removing{ opacity:0; transform:translateX(14px) scale(.97); pointer-events:none; }
   .menu-admin-row input[type=text]{ font-size:14px; padding:9px 11px; }
   .menu-admin-row .menu-admin-price{ width:84px; flex:0 0 auto; font-size:14px; padding:9px 8px; }
+  .reorder-col{ display:flex; flex-direction:column; gap:2px; flex:0 0 auto; }
+  .reorder-btn{ width:24px; height:20px; border-radius:6px; font-size:11px; }
+  .reorder-btn[disabled]{ opacity:.25; cursor:not-allowed; }
+  .menu-admin-toppings-row{ display:flex; gap:8px; padding:0 0 10px 32px; }
+  .menu-admin-toppings-row input[type=text]{ font-size:12.5px; padding:7px 10px; }
+  .menu-admin-toppings-row .menu-admin-price{ width:96px; flex:0 0 auto; font-size:12.5px; padding:7px 8px; }
   .new-item-row{ display:flex; gap:8px; flex-wrap:wrap; margin-top:14px; align-items:center; }
   .new-item-row input,.new-item-row select{ flex:1; min-width:110px; }
   .new-item-row select{ font-family:var(--font-body); font-size:16px; padding:13px 15px; border-radius:var(--radius-s); border:2.5px solid var(--line-strong); background:var(--paper); color:var(--ink); width:100%; }
@@ -417,7 +432,12 @@
     return (item && item.prepSeconds!=null) ? item.prepSeconds : 90;
   }
   function calcPrepMinutes(items){
-    const totalSeconds = items.reduce((s,i)=>s + itemPrepSeconds(i.id)*i.qty, 0);
+    const toppingSecs = (settings && settings.toppingPrepSeconds!=null) ? settings.toppingPrepSeconds : 5;
+    const totalSeconds = items.reduce((s,i)=>{
+      const baseSecs = itemPrepSeconds(i.baseId || i.id);
+      const extra = (i.toppings ? i.toppings.length : 0) * toppingSecs;
+      return s + (baseSecs+extra)*i.qty;
+    }, 0);
     const buffer = (settings && settings.adminBufferSeconds!=null) ? settings.adminBufferSeconds : 30;
     const roundTo = (settings && settings.roundToMinutes) || 1;
     const minutes = Math.ceil(((totalSeconds+buffer)/60) / roundTo) * roundTo;
@@ -448,7 +468,9 @@
     viewingOrderId: null,
     panelsOpen: { menu:false, team:false, timings:false },
     pinAction: null,     // {id, mode:'self'|'admin'}
-    pinActionError: null
+    pinActionError: null,
+    renameAction: null,  // {id}
+    renameError: null
   };
 
   let sb = null;
@@ -456,7 +478,7 @@
   let menuItems = [];
   let orders = [];
   let staffList = [];
-  let settings = { minutesPerOrder: 3, adminBufferSeconds: 30, roundToMinutes: 1 };
+  let settings = { minutesPerOrder: 3, adminBufferSeconds: 30, roundToMinutes: 1, shopOpen: true, toppingPrepSeconds: 5 };
   let prevStatusMap = new Map();
   let firstOrdersSnapshot = true;
   let stepperLastStep = { 'ordering-stepper': -1, 'wait-stepper': -1 };
@@ -553,7 +575,9 @@
       settings = {
         minutesPerOrder: settingsRes.data.minutes_per_order,
         adminBufferSeconds: settingsRes.data.admin_buffer_seconds!=null ? settingsRes.data.admin_buffer_seconds : 30,
-        roundToMinutes: settingsRes.data.round_to_minutes!=null ? settingsRes.data.round_to_minutes : 1
+        roundToMinutes: settingsRes.data.round_to_minutes!=null ? settingsRes.data.round_to_minutes : 1,
+        shopOpen: settingsRes.data.shop_open!=null ? settingsRes.data.shop_open : true,
+        toppingPrepSeconds: settingsRes.data.topping_prep_seconds!=null ? settingsRes.data.topping_prep_seconds : 5
       };
     }
     // delivery_points table may not exist yet if the migration hasn't been run —
@@ -595,7 +619,9 @@
           settings = {
             minutesPerOrder: payload.new.minutes_per_order,
             adminBufferSeconds: payload.new.admin_buffer_seconds!=null ? payload.new.admin_buffer_seconds : 30,
-            roundToMinutes: payload.new.round_to_minutes!=null ? payload.new.round_to_minutes : 1
+            roundToMinutes: payload.new.round_to_minutes!=null ? payload.new.round_to_minutes : 1,
+            shopOpen: payload.new.shop_open!=null ? payload.new.shop_open : true,
+            toppingPrepSeconds: payload.new.topping_prep_seconds!=null ? payload.new.topping_prep_seconds : 5
           };
         }
         render();
@@ -839,7 +865,8 @@
   }
   async function placeOrder(){
     if (!state.cart.length || !state.dropOff) return;
-    const items = state.cart.map(i=>({id:i.id, name:i.name, price:i.price, qty:i.qty}));
+    if (settings.shopOpen===false && !state.staff){ toast('Sorry, we\'re not taking orders today.'); render(); return; }
+    const items = state.cart.map(i=>({id:i.id, name:i.name, price:i.price, qty:i.qty, baseId:i.baseId||i.id, toppings:i.toppings||[]}));
     const total = items.reduce((s,i)=>s+i.price*i.qty,0);
     const prepMinutes = calcPrepMinutes(items);
     if (total < 1){
@@ -960,6 +987,25 @@
     toast(name+' removed from the team');
     render();
   }
+  async function renameStaffAccount(id, newName){
+    if (!newName){ state.renameError = 'Enter a name.'; render(); return; }
+    const { data, error } = await sb.rpc('rename_staff_account', { p_target_id:id, p_new_name:newName, p_admin_pin_hash: state.staff.pinHash });
+    if (error || !data){
+      state.renameError = /duplicate|unique|23505/i.test((error&&error.code||'')+' '+(error&&error.message||''))
+        ? 'That name is already taken — try a different one.'
+        : 'Could not rename that teammate — try again.';
+      render();
+      return;
+    }
+    if (id === state.staff.id){
+      state.staff.name = newName;
+      try{ sessionStorage.setItem('lh_staff', JSON.stringify(state.staff)); }catch(e){}
+    }
+    state.renameAction = null; state.renameError = null;
+    await refreshStaffList();
+    toast('Name updated');
+    render();
+  }
   async function changeOwnPin(oldPin, newPin){
     if (!oldPin || !newPin){ state.pinActionError = 'Enter both your current and new PIN.'; render(); return; }
     const oldHash = await sha256Hex(oldPin);
@@ -1028,14 +1074,37 @@
     const { error } = await sb.from('delivery_points').upsert({ drop_off: dropOff, minutes });
     if (error) toast('Could not save delivery time — try again.');
   }
-  async function saveTimingSettings(bufferVal, roundVal){
+  async function toggleShopOpen(){
+    const next = !(settings.shopOpen!==false);
+    const { error } = await sb.from('settings').update({ shop_open: next }).eq('id',1);
+    if (!error){ settings.shopOpen = next; render(); }
+  }
+  async function saveTimingSettings(bufferVal, roundVal, toppingSecVal){
     const buffer = Math.max(0, Math.min(180, Number(bufferVal)));
     const round = [0.5,1,2].includes(Number(roundVal)) ? Number(roundVal) : 1;
-    settings = Object.assign({}, settings, { adminBufferSeconds: buffer, roundToMinutes: round });
+    const toppingSec = Math.max(0, Math.min(60, Number(toppingSecVal)||0));
+    settings = Object.assign({}, settings, { adminBufferSeconds: buffer, roundToMinutes: round, toppingPrepSeconds: toppingSec });
     toast('Timing settings updated');
     render();
-    const { error } = await sb.from('settings').update({ admin_buffer_seconds: buffer, round_to_minutes: round }).eq('id',1);
+    const { error } = await sb.from('settings').update({ admin_buffer_seconds: buffer, round_to_minutes: round, topping_prep_seconds: toppingSec }).eq('id',1);
     if (error) toast('Could not save timing settings — try again.');
+  }
+  async function moveMenuItem(id, dir){
+    const item = menuItems.find(m=>m.id===id);
+    if (!item) return;
+    const siblings = menuItems.filter(m=>m.category===item.category).sort((a,b)=>a.sort-b.sort);
+    const idx = siblings.findIndex(m=>m.id===id);
+    const swapIdx = dir==='up' ? idx-1 : idx+1;
+    if (swapIdx<0 || swapIdx>=siblings.length) return;
+    const other = siblings[swapIdx];
+    const mySort = item.sort, otherSort = other.sort;
+    item.sort = otherSort; other.sort = mySort;
+    menuItems.sort((a,b)=>a.sort-b.sort);
+    render();
+    await Promise.all([
+      sb.from('menu_items').update({ sort: item.sort }).eq('id', item.id),
+      sb.from('menu_items').update({ sort: other.sort }).eq('id', other.id)
+    ]);
   }
   async function addMenuItem(name, category, price){
     const id = (category+'-'+name).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'') + '-' + Date.now().toString(36);
@@ -1097,6 +1166,23 @@
   /* ---------------------------- render: customer ---------------------------- */
   function renderConnectError(){
     return topNav() + '<div class="connect-error"><h2>Can\'t connect right now</h2><p class="tagline" style="margin-top:10px;">The Little Hatch isn\'t hooked up to its database yet. If you\'re Chris — check SUPABASE_URL and SUPABASE_ANON_KEY at the top of the script.</p></div>';
+  }
+
+  function renderClosedScreen(){
+    const myOrders = myActiveOrders();
+    let trackBlock = '';
+    if (myOrders.length){
+      trackBlock = '<div class="landing-orders-row">' + myOrders.map(o=>
+        '<button class="btn btn-primary" data-action="go-status" data-id="'+o.id+'">Track order #'+o.number+'</button>'
+      ).join('') + '</div>';
+    }
+    return '<div class="stack landing-stack">' +
+        '<div class="center landing-hero">' +
+          '<img src="'+LOGO_BLACK+'" alt="The Little Hatch" class="hero-logo">' +
+          '<div class="tagline landing-tagline">Sorry, we\'re not taking orders today. Please check back another time.</div>' +
+        '</div>' +
+        trackBlock +
+      '</div>';
   }
 
   function renderLanding(){
@@ -1282,11 +1368,12 @@
     const itemsText = order.items.map(i=>i.qty+'× '+escapeHtml(i.name)).join(', ');
     const itemCount = order.items.reduce((s,i)=>s+i.qty,0);
     const isLong = itemsText.length > 70 || order.items.length > 4 || (order.comment && order.comment.length > 60);
-    const deliverTimer = (order.status==='delivering')
-      ? '<span class="chip filled deliver-timer" id="dtimer-'+order.id+'">'+formatCountdown(etaInfo(order).ms)+'</span>'
+    const hasTimer = ['received','preparing','ready','delivering'].includes(order.status);
+    const deliverTimer = hasTimer
+      ? '<span class="chip filled deliver-timer" id="dtimer-'+order.id+'">'+timerBlock(order).big+'</span>'
       : '';
     return '<div class="ticket-mini" data-action="view-order" data-id="'+order.id+'">' +
-      '<div class="row between"><span class="order-num">#'+order.number+'</span><span class="row" style="gap:6px;">'+
+      '<div class="row between wrap" style="row-gap:6px;"><span class="order-num">#'+order.number+'</span><span class="row wrap" style="gap:6px;row-gap:6px;">'+
         '<span class="chip">Point '+order.dropOff+'</span>'+(order.verifyCode?'<span class="verify-chip">'+order.verifyCode+'</span>':'')+deliverTimer+
       '</span></div>' +
       '<div class="order-meta">'+itemCount+' item'+(itemCount>1?'s':'')+' · '+money(order.total)+' · <span class="waited">'+timeSince(order.createdAt)+'</span></div>' +
@@ -1364,16 +1451,27 @@
     const cats = sortCategories([...new Set(menuItems.map(m=>m.category))]);
     const catOptions = cats.map(c=>'<option value="'+escapeHtml(c)+'">'+escapeHtml(c)+'</option>').join('');
     return '<details class="panel" data-key="menu"'+(state.panelsOpen.menu?' open':'')+'><summary>Menu</summary>' +
-      cats.map(cat=>'<div class="menu-admin-cat">'+escapeHtml(cat)+'</div>' +
-        menuItems.filter(m=>m.category===cat).map(m=>
-          '<div class="menu-admin-row" data-row-id="'+m.id+'">' +
-            '<input type="text" class="grow" data-field="name" data-id="'+m.id+'" value="'+escapeHtml(m.name)+'">' +
-            '<input type="number" step="0.10" class="menu-admin-price" data-field="price" data-id="'+m.id+'" value="'+m.price.toFixed(2)+'">' +
-            '<div class="switch '+(m.available?'on':'')+'" data-action="toggle-stock" data-id="'+m.id+'" data-current="'+m.available+'"><div class="knob"></div></div>' +
-            '<button class="icon-btn" data-action="delete-menu-item" data-id="'+m.id+'" title="Remove">×</button>' +
-          '</div>'
-        ).join('')
-      ).join('') +
+      '<p class="tagline" style="margin:4px 0 12px;">Use the arrows to reorder items within a category. Add-ons are comma-separated — leave blank for none.</p>' +
+      cats.map(cat=>{
+        const items = menuItems.filter(m=>m.category===cat);
+        return '<div class="menu-admin-cat">'+escapeHtml(cat)+'</div>' +
+          items.map((m,idx)=>
+            '<div class="menu-admin-row" data-row-id="'+m.id+'">' +
+              '<div class="reorder-col">' +
+                '<button type="button" class="icon-btn reorder-btn" data-action="move-menu-item" data-id="'+m.id+'" data-dir="up"'+(idx===0?' disabled':'')+' title="Move up">↑</button>' +
+                '<button type="button" class="icon-btn reorder-btn" data-action="move-menu-item" data-id="'+m.id+'" data-dir="down"'+(idx===items.length-1?' disabled':'')+' title="Move down">↓</button>' +
+              '</div>' +
+              '<input type="text" class="grow" data-field="name" data-id="'+m.id+'" value="'+escapeHtml(m.name)+'">' +
+              '<input type="number" step="0.10" class="menu-admin-price" data-field="price" data-id="'+m.id+'" value="'+m.price.toFixed(2)+'">' +
+              '<div class="switch '+(m.available?'on':'')+'" data-action="toggle-stock" data-id="'+m.id+'" data-current="'+m.available+'"><div class="knob"></div></div>' +
+              '<button class="icon-btn" data-action="delete-menu-item" data-id="'+m.id+'" title="Remove">×</button>' +
+            '</div>' +
+            '<div class="menu-admin-toppings-row">' +
+              '<input type="text" class="grow" data-field="toppings" data-id="'+m.id+'" placeholder="Add-ons e.g. Milk, Sugar" value="'+escapeHtml((m.toppings||[]).join(', '))+'">' +
+              '<input type="number" step="0.10" min="0" class="menu-admin-price" data-field="topping-price" data-id="'+m.id+'" placeholder="Add-on £" value="'+(m.toppingPrice!=null?m.toppingPrice.toFixed(2):'')+'">' +
+            '</div>'
+          ).join('');
+      }).join('') +
       '<div class="new-item-row">' +
         '<input type="text" id="new-item-name" placeholder="Item name">' +
         '<div class="row" style="gap:6px;flex:1;min-width:150px;">' +
@@ -1437,8 +1535,12 @@
           '<option value="1"'+((!settings||settings.roundToMinutes===1)?' selected':'')+'>1 minute</option>' +
           '<option value="2"'+((settings&&settings.roundToMinutes===2)?' selected':'')+'>2 minutes</option>' +
         '</select>' +
-        '<button class="btn btn-sm" data-action="save-timing-settings">Save</button>' +
       '</div>' +
+      '<div class="pace-row">' +
+        '<label for="topping-prep-input">Extra time per add-on (seconds)</label>' +
+        '<input type="number" min="0" max="60" step="1" id="topping-prep-input" value="'+((settings&&settings.toppingPrepSeconds!=null)?settings.toppingPrepSeconds:5)+'">' +
+      '</div>' +
+      '<div class="row" style="margin-top:4px;"><button class="btn btn-sm" data-action="save-timing-settings">Save</button></div>' +
     '</details>';
   }
 
@@ -1468,6 +1570,21 @@
     '</div>';
   }
 
+  function renderRenameBox(){
+    if (!state.renameAction) return '';
+    const target = staffList.find(s=>s.id===state.renameAction.id);
+    if (!target) return '';
+    const err = state.renameError ? '<div class="error-text">'+escapeHtml(state.renameError)+'</div>' : '';
+    return '<div class="stack pin-action-box" style="margin-top:12px;gap:10px;">' +
+      '<p class="tagline">Rename <strong>'+escapeHtml(target.name)+'</strong>.</p>' + err +
+      '<input type="text" id="rename-staff-input" placeholder="Name" value="'+escapeHtml(target.name)+'">' +
+      '<div class="row" style="gap:8px;">' +
+        '<button class="btn btn-primary btn-sm grow" data-action="submit-rename-staff">Save name</button>' +
+        '<button class="btn btn-sm grow" data-action="cancel-rename-staff">Cancel</button>' +
+      '</div>' +
+    '</div>';
+  }
+
   function renderTeamPanel(){
     const addBox = state.addingStaff
       ? (
@@ -1488,10 +1605,16 @@
     const rows = staffList.map(s=>{
       const isMe = s.id === meId;
       const action = isMe
-        ? '<button class="btn btn-sm" data-action="show-change-pin" data-id="'+s.id+'">Change</button>'
+        ? (
+            '<div class="row" style="gap:4px;flex-wrap:nowrap;">' +
+              '<button class="btn btn-sm" data-action="show-change-pin" data-id="'+s.id+'">Change</button>' +
+              '<button class="icon-btn" style="width:30px;height:30px;flex:0 0 auto;" data-action="show-rename-staff" data-id="'+s.id+'" title="Rename">✎</button>' +
+            '</div>'
+          )
         : (
             '<div class="row" style="gap:4px;flex-wrap:nowrap;">' +
               '<button class="btn btn-sm" data-action="show-reset-pin" data-id="'+s.id+'">Reset</button>' +
+              '<button class="icon-btn" style="width:30px;height:30px;flex:0 0 auto;" data-action="show-rename-staff" data-id="'+s.id+'" title="Rename">✎</button>' +
               '<button class="icon-btn" style="width:30px;height:30px;flex:0 0 auto;" data-action="delete-staff" data-id="'+s.id+'" data-name="'+escapeHtml(s.name)+'" title="Delete teammate">×</button>' +
             '</div>'
           );
@@ -1511,8 +1634,18 @@
         '<tbody>' + rows + '</tbody>' +
       '</table></div>' +
       renderPinActionBox() +
+      renderRenameBox() +
       addBox +
     '</details>';
+  }
+
+  function renderShopStatusBar(){
+    const open = settings.shopOpen!==false;
+    return '<div class="shop-status-bar '+(open?'open':'closed')+'">' +
+      '<div><div class="shop-status-label">'+(open?'Serving today':'Closed today')+'</div>' +
+      '<div class="tagline" style="color:inherit;opacity:.85;">'+(open?'Customers can place orders as normal.':'Customers see a closed message and can\u2019t place orders.')+'</div></div>' +
+      '<div class="switch lg '+(open?'on':'')+'" data-action="toggle-shop-open" data-current="'+open+'"><div class="knob"></div></div>' +
+    '</div>';
   }
 
   function renderStaffBoard(){
@@ -1525,6 +1658,7 @@
     const modes = ['cafe','delivery','both'];
     return topNavStaff({right:'<button class="btn btn-sm" data-action="staff-signout">Sign out</button>'}) +
       '<div class="row between wrap" style="margin-bottom:6px;"><span class="tagline">Signed in as <strong>'+escapeHtml(state.staff.name)+'</strong></span>'+notifBtn+'</div>' +
+      (state.staff.isAdmin ? renderShopStatusBar() : '') +
       '<div class="mode-switch">' + modes.map(m=>'<button class="mode-pill '+(state.staffMode===m?'active':'')+'" data-action="set-staff-mode" data-mode="'+m+'">'+cap(m)+'</button>').join('') + '</div>' +
       ((state.staffMode==='cafe'||state.staffMode==='both') ? renderCafeSection() : '') +
       ((state.staffMode==='delivery'||state.staffMode==='both') ? renderDeliverySection() : '') +
@@ -1537,7 +1671,9 @@
     const app = document.getElementById('app');
     app.classList.remove('wide');
     let html = '';
+    const shopClosed = settings.shopOpen===false && !state.staff;
     if (connectError){ html = renderConnectError(); }
+    else if (shopClosed && ['landing','dropoff','menu','basket'].includes(state.view)){ html = renderClosedScreen(); }
     else switch(state.view){
       case 'landing': html = renderLanding(); break;
       case 'dropoff': html = renderDropoff(); break;
@@ -1623,6 +1759,14 @@
     const field = el.dataset.field, id = el.dataset.id;
     if (field==='name') await sb.from('menu_items').update({ name: el.value }).eq('id', id);
     if (field==='price') await sb.from('menu_items').update({ price: parseFloat(el.value)||0 }).eq('id', id);
+    if (field==='toppings'){
+      const list = el.value.split(',').map(t=>t.trim()).filter(Boolean);
+      await sb.from('menu_items').update({ toppings: list.length ? list : null }).eq('id', id);
+    }
+    if (field==='topping-price'){
+      const val = el.value.trim()==='' ? null : Math.max(0, parseFloat(el.value)||0);
+      await sb.from('menu_items').update({ topping_price: val }).eq('id', id);
+    }
     if (field==='prep-min' || field==='prep-sec'){
       const row = el.closest('.timing-row');
       const mm = Math.max(0, parseInt(row.querySelector('[data-field="prep-min"]').value, 10) || 0);
@@ -1734,6 +1878,8 @@
         break;
       case 'staff-signout': staffSignOut(); break;
       case 'advance': setOrderStatus(btn.dataset.id, statusPatch(btn.dataset.to)); break;
+      case 'toggle-shop-open': toggleShopOpen(); break;
+      case 'move-menu-item': moveMenuItem(btn.dataset.id, btn.dataset.dir); break;
       case 'toggle-stock': {
         const id = btn.dataset.id, current = btn.dataset.current==='true';
         const item = menuItems.find(m=>m.id===id);
@@ -1780,6 +1926,13 @@
       case 'show-change-pin': state.pinAction = { id: btn.dataset.id, mode:'self' }; state.pinActionError = null; render(); break;
       case 'show-reset-pin': state.pinAction = { id: btn.dataset.id, mode:'admin' }; state.pinActionError = null; render(); break;
       case 'cancel-pin-action': state.pinAction = null; state.pinActionError = null; render(); break;
+      case 'show-rename-staff': state.renameAction = { id: btn.dataset.id }; state.renameError = null; render(); break;
+      case 'cancel-rename-staff': state.renameAction = null; state.renameError = null; render(); break;
+      case 'submit-rename-staff': {
+        const newName = document.getElementById('rename-staff-input').value.trim();
+        renameStaffAccount(state.renameAction.id, newName);
+        break;
+      }
       case 'submit-change-pin': {
         const oldPin = document.getElementById('change-pin-old').value.trim();
         const newPin = document.getElementById('change-pin-new').value.trim();
@@ -1813,7 +1966,8 @@
       case 'save-timing-settings': {
         const bufferInput = document.getElementById('admin-buffer-input');
         const roundInput = document.getElementById('round-to-input');
-        saveTimingSettings(bufferInput ? bufferInput.value : null, roundInput ? roundInput.value : null);
+        const toppingSecInput = document.getElementById('topping-prep-input');
+        saveTimingSettings(bufferInput ? bufferInput.value : null, roundInput ? roundInput.value : null, toppingSecInput ? toppingSecInput.value : null);
         break;
       }
     }
@@ -1829,9 +1983,9 @@
       }
     }
     if (state.view==='staffBoard'){
-      orders.filter(o=>o.status==='delivering').forEach(o=>{
+      orders.filter(o=>['received','preparing','ready','delivering'].includes(o.status)).forEach(o=>{
         const el = document.getElementById('dtimer-'+o.id);
-        if (el) el.textContent = formatCountdown(etaInfo(o).ms);
+        if (el) el.textContent = timerBlock(o).big;
       });
     }
   }, 1000);
