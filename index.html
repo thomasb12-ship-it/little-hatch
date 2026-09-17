@@ -110,7 +110,7 @@
   .ticket::before,.ticket::after{ content:""; position:absolute; top:50%; width:20px; height:20px; background:var(--paper); border:2.5px solid var(--line); border-radius:50%; transform:translateY(-50%); }
   .ticket::before{ left:-11px; } .ticket::after{ right:-11px; }
   .ticket-perf{ border-top:3px dashed var(--line-strong); margin:16px 0; }
-  .ticket-mini{ background:var(--paper-2); border:2px solid var(--line); border-radius:var(--radius-m); padding:14px 16px; transition:transform .3s var(--ease-bounce); min-width:0; max-width:100%; overflow-wrap:anywhere; }
+  .ticket-mini{ background:var(--paper-2); border:2px solid var(--line); border-radius:var(--radius-m); padding:14px 16px; transition:transform .3s var(--ease-bounce); min-width:0; max-width:100%; overflow-wrap:anywhere; animation:rowIn .24s var(--ease-bounce) both; }
 
   .stat-row{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
   .stat-tile{ background:var(--paper); border:2px solid var(--line); border-radius:var(--radius-m); padding:12px 14px; text-align:center; }
@@ -176,11 +176,22 @@
   }
   .topping-chip span{ display:block; line-height:1; transform:translateY(.5px); }
   .topping-chip:active{ transform:scale(.9); }
-  .topping-chip.selected{ background:var(--line-strong); border-style:solid; border-color:var(--line-strong); color:var(--ink-2); }
+  .topping-chip.selected{ background:var(--line-strong); border-style:solid; border-color:var(--line-strong); color:var(--ink); font-weight:700; }
+
+  /* Cart add/remove re-renders the whole page, which used to replay every
+     row's entrance animation and make the menu look like it jumped. render()
+     marks those redraws with #app.no-row-anim so only a genuine page
+     navigation or category-tab switch plays the entrance animation. */
+  #app.no-row-anim .menu-item,
+  #app.no-row-anim .topping-row,
+  #app.no-row-anim .qty-ctrl,
+  #app.no-row-anim .basket-line{ animation:none; }
 
   .basket-bar{ position:sticky; bottom:14px; margin-top:18px; background:var(--ink); color:var(--paper); border-radius:999px; padding:14px 20px; display:flex; align-items:center; justify-content:space-between; box-shadow:0 8px 22px var(--shadow); transition:transform .3s var(--ease-bounce); }
   .basket-bar.bump{ animation:bump .4s var(--ease-bounce); }
   @keyframes bump{ 0%{transform:scale(1);} 40%{transform:scale(1.05);} 100%{transform:scale(1);} }
+  #basket-bar-info.info-fade{ animation:infoFade .35s ease; }
+  @keyframes infoFade{ 0%{opacity:.25; transform:translateY(2px);} 100%{opacity:1; transform:translateY(0);} }
   .basket-bar .btn{ border-color:var(--paper); color:var(--paper); background:transparent; }
   .basket-bar .btn:active{ background:rgba(255,255,255,.15); }
   .basket-bar .btn.btn-primary{ background:var(--paper); color:var(--ink); }
@@ -215,10 +226,16 @@
   .mode-pill:active{ transform:scale(.92); }
 
   details.panel{ margin-top:22px; border:2px solid var(--line); border-radius:var(--radius-l); background:var(--paper-2); padding:4px 18px; }
-  details.panel summary{ cursor:pointer; padding:14px 0; font-weight:700; list-style:none; display:flex; align-items:center; gap:8px; font-family:var(--font-display); font-size:17px; }
+  details.panel summary{ cursor:pointer; padding:14px 0; font-weight:700; list-style:none; display:flex; align-items:center; gap:8px; font-family:var(--font-display); font-size:17px; transition:color .15s ease; }
   details.panel summary::-webkit-details-marker{ display:none; }
-  details.panel summary::before{ content:"+"; width:1em; }
+  details.panel summary::before{ content:"+"; width:1em; transition:transform .2s var(--ease-bounce); display:inline-block; }
   details.panel[open] summary::before{ content:"–"; }
+  /* Only ever triggered by a real tap on the summary (see the JS 'toggle'
+     listener) — never replayed by an unrelated re-render elsewhere on the
+     admin page, so opening Menu/Timings/Team feels like a deliberate,
+     smooth reveal rather than an instant snap. */
+  details.panel.panel-pop{ animation:panelPop .3s var(--ease-bounce); }
+  @keyframes panelPop{ from{ opacity:.5; transform:translateY(-6px) scale(.99);} to{ opacity:1; transform:translateY(0) scale(1);} }
   .stock-row{ display:flex; align-items:center; justify-content:space-between; padding:9px 0; border-bottom:1px solid var(--line); font-size:14px; gap:10px; }
   .stock-row:last-child{ border-bottom:none; }
 
@@ -524,6 +541,17 @@
   }
   function removeTrackedOrderId(id){
     setTrackedOrderIds(getTrackedOrderIds().filter(x=>x!==id));
+  }
+  // The card/cash payment note shows on the basket page every time. Once a
+  // customer has actually seen it there, the tracking page doesn't need to
+  // repeat it — but if they placed an order without ever landing on the
+  // basket page seeing it (shouldn't normally happen, but better safe),
+  // the tracking page shows it instead so they're never left not knowing.
+  function hasSeenPaymentNote(){
+    try{ return localStorage.getItem('lh_seen_payment_note') === '1'; }catch(e){ return false; }
+  }
+  function markPaymentNoteSeen(){
+    try{ localStorage.setItem('lh_seen_payment_note', '1'); }catch(e){}
   }
   function myActiveOrders(){
     const ids = getTrackedOrderIds();
@@ -924,7 +952,7 @@
   function addToCart(item){
     const line = state.cart.find(i=>i.id===item.id);
     if (line) line.qty++; else state.cart.push({ id:item.id, name:item.name, price:item.price, qty:1, baseId:item.id, toppings:[] });
-    render();
+    renderAfterCartChange();
   }
   // Tapping a topping chip adds that topping onto an existing unit of the base
   // item (e.g. Crumpet -> +Jam -> +Marmalade builds ONE "Crumpet + Jam + Marmalade"
@@ -949,7 +977,7 @@
         price: base.price + newToppings.length*tPrice, qty:1, toppings:newToppings
       });
     }
-    render();
+    renderAfterCartChange();
     return true;
   }
   function removeFromCart(id){
@@ -957,10 +985,17 @@
     if (!line) return;
     line.qty--;
     if (line.qty<=0) state.cart = state.cart.filter(i=>i.id!==id);
-    render();
+    renderAfterCartChange();
   }
   function cartTotal(){ return state.cart.reduce((s,i)=>s+i.price*i.qty,0); }
   function cartCount(){ return state.cart.reduce((s,i)=>s+i.qty,0); }
+  const HOT_DRINK_CARRY_LIMIT = 6;
+  function cartHotDrinkQty(){
+    return state.cart.reduce((s,i)=>{
+      const base = menuItems.find(m=>m.id===(i.baseId||i.id));
+      return s + (base && base.category==='Hot Drinks' ? i.qty : 0);
+    }, 0);
+  }
 
   /* ---------------------------- staff actions ---------------------------- */
   async function staffLogin(name, pin){
@@ -984,6 +1019,14 @@
     state.staff = null; state.staffMode = null;
     try{ sessionStorage.removeItem('lh_staff'); sessionStorage.removeItem('lh_staff_mode'); }catch(e){}
     go('landing');
+  }
+  // The logo on any staff screen should always land back on the staff sign-in
+  // screen, never out to the customer-facing app — tapping it also clears the
+  // remembered session so the sign-in form is genuinely what's shown next time.
+  function staffLogoTap(){
+    state.staff = null; state.staffMode = null;
+    try{ sessionStorage.removeItem('lh_staff'); sessionStorage.removeItem('lh_staff_mode'); }catch(e){}
+    go('staffLogin');
   }
   async function refreshStaffList(){
     if (!state.staff) return;
@@ -1162,7 +1205,7 @@
   }
   function topNavStaff(opts){
     opts = opts||{};
-    return '<div class="top-nav staff-bar"><div class="brand" data-action="go-landing"><img src="'+LOGO_WHITE+'" alt="The Little Hatch" class="brand-logo"></div>'+(opts.right||'')+'</div>';
+    return '<div class="top-nav staff-bar"><div class="brand" data-action="staff-logo"><img src="'+LOGO_WHITE+'" alt="The Little Hatch" class="brand-logo"></div>'+(opts.right||'')+'</div>';
   }
   function stageIndex(status){ return STAGES.findIndex(s=>s.key===status); }
   // Shared stepper renderer for BOTH the ordering flow (Point/Menu/Basket) and
@@ -1287,13 +1330,14 @@
       ).join('') + '</div>' +
       '<div class="stack" style="gap:0;">' + items.map(renderMenuItem).join('') + '</div>' +
       (cartCount()>0 ? (
-        '<div class="basket-bar" id="basket-bar"><span>'+cartCount()+' item'+(cartCount()>1?'s':'')+' · '+money(cartTotal())+'</span>' +
+        '<div class="basket-bar" id="basket-bar"><span id="basket-bar-info">'+cartCount()+' item'+(cartCount()>1?'s':'')+' · '+money(cartTotal())+'</span>' +
           '<span class="row" style="gap:8px;"><button class="btn btn-sm" data-action="go-basket">View basket</button>' +
           '<button class="btn btn-sm btn-primary" data-action="place-order">Place order</button></span></div>'
       ) : '');
   }
 
   function renderBasket(){
+    if (state.cart.length) markPaymentNoteSeen();
     return topNav({right:'<button class="btn btn-sm" data-action="go-landing">Cancel</button>'}) +
       orderingStepper(2) +
       '<div class="row between" style="margin-bottom:2px;"><h2>Your basket</h2><span class="chip">Collection point '+state.dropOff+'</span></div>' +
@@ -1309,6 +1353,7 @@
             '<div class="ticket-perf"></div>' +
             '<div class="row between"><strong>Total</strong><strong class="mono">'+money(cartTotal())+'</strong></div>' +
           '</div>' +
+          (cartHotDrinkQty() > HOT_DRINK_CARRY_LIMIT ? '<div class="error-text center" style="margin-top:14px;">That\'s '+cartHotDrinkQty()+' hot drinks — we might not be able to carry them all safely in one delivery. We\'ll do our best, but a second trip may be needed.</div>' : '') +
           '<p class="tagline center" style="margin-top:14px;">You\'ll pay when your order is delivered to you — we accept both card and cash.</p>' +
           (cartTotal() > 0 && cartTotal() < 1 ? '<div class="error-text center" style="margin-top:10px;">Card payments need a £1 minimum — please bring cash for this order.</div>' : '') +
           '<p class="tagline center" style="margin-top:10px;">Paying by cash? Sorry, we don\'t carry change, so please bring the exact amount.</p>' +
@@ -1338,6 +1383,13 @@
     const notifBtn = window.Notification
       ? '<button class="btn btn-sm '+(state.notifyReady?'chip filled':'')+'" data-action="enable-order-notifs">'+(state.notifyReady?'Notifying you of updates ✓ (tap to turn off)':'Notify me of updates')+'</button>'
       : '';
+    // Only repeat the card/cash payment note here if they never saw it on
+    // the basket page — once shown (on either page) it's marked seen for good.
+    const showPaymentNote = !hasSeenPaymentNote();
+    if (showPaymentNote) markPaymentNoteSeen();
+    const paymentNoteHtml = showPaymentNote
+      ? '<p class="tagline center" style="margin-top:14px;">You\'ll pay when your order is delivered to you — we accept both card and cash.</p>'
+      : '';
 
     return topNav({right:'<button class="btn btn-sm" data-action="go-landing">Home</button>'}) +
       '<div class="ticket">' +
@@ -1363,6 +1415,7 @@
         '<div class="ticket-perf"></div>' +
         '<div class="row between"><strong>Total</strong><strong class="mono">'+money(order.total)+'</strong></div>' +
       '</div>' +
+      paymentNoteHtml +
       (order.status==='delivered'
         ? '<button class="btn btn-primary btn-block" style="margin-top:18px;" data-action="new-order">Place another order</button>'
         : '<div class="center" style="margin-top:16px;">'+notifBtn+'</div><p class="footer-note">This page updates itself — no need to refresh.</p>');
@@ -1500,16 +1553,23 @@
             '</div>'
           ).join('');
       }).join('') +
+      '<div class="menu-admin-cat" style="margin-top:18px;">Add a new item</div>' +
       '<div class="new-item-row">' +
         '<input type="text" id="new-item-name" placeholder="Item name">' +
-        '<div class="row" style="gap:6px;flex:1;min-width:150px;">' +
-          '<select id="new-item-category" class="grow">'+catOptions+'</select>' +
-          '<button type="button" class="icon-btn" data-action="add-new-category" title="Add new category">+</button>' +
-        '</div>' +
+        '<select id="new-item-category" class="grow">'+catOptions+'</select>' +
         (state.newCategoryDraft ? '<input type="text" id="new-item-category-new" placeholder="New category name" autofocus>' : '') +
         '<input type="number" step="0.10" id="new-item-price" placeholder="Price">' +
         '<button class="btn btn-sm" data-action="add-menu-item">Add item</button>' +
       '</div>' +
+      '<div class="menu-admin-cat" style="margin-top:14px;">Add a new category</div>' +
+      '<p class="tagline" style="margin:2px 0 8px;">'+(state.newCategoryDraft
+        ? 'Type the new category\'s name above, then fill in an item for it and tap Add item.'
+        : 'A category only appears in the menu once it has at least one item in it.'
+      )+'</p>' +
+      (state.newCategoryDraft
+        ? '<button type="button" class="btn btn-sm" data-action="cancel-new-category">Cancel new category</button>'
+        : '<button type="button" class="btn btn-sm" data-action="add-new-category">+ New category</button>'
+      ) +
     '</details>';
   }
 
@@ -1695,9 +1755,26 @@
   }
 
   /* ---------------------------- master render ---------------------------- */
+  // Cart add/remove/topping taps call render() to redraw the page, but since
+  // that's a full app.innerHTML replace, every menu row, chip and the basket
+  // bar are torn down and rebuilt from scratch each time — which used to
+  // replay every entrance animation across the whole visible list and made
+  // the page look like it "jumped". cartOnlyRender marks those redraws so we
+  // can suppress the row animations and hold the scroll position steady,
+  // while still keeping full entrance animation for a real page navigation
+  // or a category-tab switch.
+  let cartOnlyRender = false;
+  function renderAfterCartChange(){
+    const scrollY = window.scrollY;
+    cartOnlyRender = true;
+    render();
+    cartOnlyRender = false;
+    window.scrollTo(0, scrollY);
+  }
   function render(navEntrance){
     const app = document.getElementById('app');
     app.classList.remove('wide');
+    if (cartOnlyRender) app.classList.add('no-row-anim'); else app.classList.remove('no-row-anim');
     let html = '';
     const shopClosed = settings.shopOpen===false && !state.staff;
     if (connectError){ html = renderConnectError(); }
@@ -1732,12 +1809,23 @@
       app.classList.remove('ready');
       app.classList.remove('fade-in'); void app.offsetWidth; app.classList.add('fade-in');
     } else {
+      // Every re-render rebuilds fresh DOM nodes, so a lingering 'fade-in'
+      // class from the last real navigation would replay the logo's pop-in
+      // animation (and anything else scoped to #app.fade-in) on every single
+      // cart or category update. Only a true navEntrance should ever trigger it.
+      app.classList.remove('fade-in');
       app.classList.add('ready');
     }
     const pf = document.getElementById('dropoff-form'); if (pf) pf.addEventListener('submit', onDropoffSubmit);
     const sf = document.getElementById('staff-login-form'); if (sf) sf.addEventListener('submit', onStaffLoginSubmit);
     document.querySelectorAll('details.panel[data-key]').forEach(d=>{
-      d.addEventListener('toggle', ()=>{ state.panelsOpen[d.dataset.key] = d.open; });
+      d.addEventListener('toggle', ()=>{
+        state.panelsOpen[d.dataset.key] = d.open;
+        // This fires only on a genuine native open/close (a real tap on the
+        // summary), never from our own re-renders, so the little pop-in never
+        // replays just because something else on the admin page changed.
+        if (d.open){ d.classList.remove('panel-pop'); void d.offsetWidth; d.classList.add('panel-pop'); }
+      });
     });
   }
 
@@ -1755,6 +1843,8 @@
   function bumpBasket(){
     const bar = document.getElementById('basket-bar');
     if (bar){ bar.classList.remove('bump'); void bar.offsetWidth; bar.classList.add('bump'); }
+    const info = document.getElementById('basket-bar-info');
+    if (info){ info.classList.remove('info-fade'); void info.offsetWidth; info.classList.add('info-fade'); }
   }
   function popQty(id){
     const el = document.getElementById('qn-'+id);
@@ -1821,6 +1911,7 @@
     const action = btn.dataset.action;
     switch(action){
       case 'go-landing': go('landing'); break;
+      case 'staff-logo': staffLogoTap(); break;
       case 'go-dropoff': go('dropoff'); break;
       case 'go-menu': go('menu'); break;
       case 'go-basket': go('basket'); break;
@@ -1839,12 +1930,13 @@
       case 'cart-plus-raw':
         addToCart({ id:btn.dataset.id, name:btn.dataset.name, price:parseFloat(btn.dataset.price) });
         popQty(btn.dataset.id);
+        bumpBasket();
         break;
       case 'cart-plus-topping': {
         const base = menuItems.find(m=>m.id===btn.dataset.base);
         if (base && base.available){
           const topping = decodeURIComponent(btn.dataset.topping);
-          if (addToppingToCart(base, topping)) popPlusOne(btn);
+          if (addToppingToCart(base, topping)){ popPlusOne(btn); bumpBasket(); }
         }
         break;
       }
@@ -1854,10 +1946,12 @@
         const row = btn.closest('.basket-line');
         if (line && line.qty===1 && row){
           row.classList.add('removing');
+          bumpBasket();
           setTimeout(()=>removeFromCart(id), 220);
         } else {
           removeFromCart(id);
           popQty(id);
+          bumpBasket();
         }
         break;
       }
@@ -1930,6 +2024,7 @@
         break;
       }
       case 'add-new-category': state.newCategoryDraft = true; render(); break;
+      case 'cancel-new-category': state.newCategoryDraft = false; render(); break;
       case 'add-menu-item': {
         const name = document.getElementById('new-item-name').value.trim();
         const newCatInput = document.getElementById('new-item-category-new');
