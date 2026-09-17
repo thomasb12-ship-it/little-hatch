@@ -175,6 +175,7 @@
   }
   .topping-chip span{ display:block; line-height:1; transform:translateY(.5px); }
   .topping-chip:active{ transform:scale(.9); }
+  .topping-chip.selected{ background:var(--line-strong); border-style:solid; border-color:var(--line-strong); color:var(--ink-2); }
 
   .basket-bar{ position:sticky; bottom:14px; margin-top:18px; background:var(--ink); color:var(--paper); border-radius:999px; padding:14px 20px; display:flex; align-items:center; justify-content:space-between; box-shadow:0 8px 22px var(--shadow); transition:transform .3s var(--ease-bounce); }
   .basket-bar.bump{ animation:bump .4s var(--ease-bounce); }
@@ -907,6 +908,18 @@
   }
 
   function cartQty(id){ const line = state.cart.find(i=>i.id===id); return line ? line.qty : 0; }
+  // Which toppings are "live" on a base item right now, for greying out its
+  // chips on the menu. We look at the most recently touched cart line for
+  // that base (addToCart/addToppingToCart both push a fresh line to the end
+  // of state.cart when they start a new one) — so tapping +Milk greys the
+  // Milk chip, and tapping Add again to start a brand new plain unit of the
+  // same coffee puts the chips back to white.
+  function activeToppingsFor(baseId){
+    for (let i = state.cart.length - 1; i >= 0; i--){
+      if (state.cart[i].baseId === baseId) return state.cart[i].toppings || [];
+    }
+    return [];
+  }
   function addToCart(item){
     const line = state.cart.find(i=>i.id===item.id);
     if (line) line.qty++; else state.cart.push({ id:item.id, name:item.name, price:item.price, qty:1, baseId:item.id, toppings:[] });
@@ -1253,8 +1266,9 @@
     if (hasT){
       const tPrice = item.toppingPrice!=null ? item.toppingPrice : 0.5;
       const priceLabel = tPrice>0 ? ' '+money(tPrice) : '';
+      const activeToppings = activeToppingsFor(item.id);
       html += '<div class="topping-row">' + item.toppings.map(t=>
-        '<button class="topping-chip" data-action="cart-plus-topping" data-base="'+item.id+'" data-topping="'+encodeURIComponent(t)+'"><span>+ '+escapeHtml(t)+priceLabel+'</span></button>'
+        '<button class="topping-chip'+(activeToppings.includes(t)?' selected':'')+'" data-action="cart-plus-topping" data-base="'+item.id+'" data-topping="'+encodeURIComponent(t)+'"><span>+ '+escapeHtml(t)+priceLabel+'</span></button>'
       ).join('') + '</div>';
     }
     return html;
