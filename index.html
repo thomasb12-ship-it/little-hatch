@@ -299,7 +299,10 @@
   /* ---------------------------- timer block (order tracking) ---------------------------- */
   .timer-block{ margin:6px 0 16px; }
   .timer-big{ font-family:var(--font-display); font-weight:800; font-size:clamp(30px,10vw,44px); letter-spacing:.02em; color:var(--ink); line-height:1.1; }
+  .timer-big.late{ color:#b8362a; }
   .timer-caption{ font-size:12.5px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-3); margin-top:2px; }
+  .timer-caption.late{ color:#b8362a; }
+  .deliver-timer.late{ background:#b8362a; border-color:#b8362a; color:#fff; }
 
   /* ---------------------------- order note (customer + staff) ---------------------------- */
   .note-field{ display:flex; flex-direction:column; gap:6px; }
@@ -547,6 +550,7 @@
     return { id:r.id, number:r.number, dropOff:r.drop_off, items:r.items, total:Number(r.total), status:r.status,
       verifyCode: r.verify_code || null, courierName: r.courier_name || null, comment: r.comment || null,
       createdAt: new Date(r.created_at).getTime(), prepMinutes:r.prep_minutes,
+      etaAt: r.eta_at ? new Date(r.eta_at).getTime() : null,
       preparingStartedAt: r.preparing_started_at ? new Date(r.preparing_started_at).getTime() : null,
       readyAt: r.ready_at ? new Date(r.ready_at).getTime() : null,
       deliveringAt: r.delivering_at ? new Date(r.delivering_at).getTime() : null,
@@ -801,36 +805,43 @@
   function aheadCount(order){
     return activeQueue().filter(o=>o.id!==order.id && o.createdAt < order.createdAt).length;
   }
-  function etaInfo(order){
+  // One fixed target time is set the moment an order is placed (see placeOrder)
+  // and never recalculated — the customer sees a single countdown running
+  // from "order placed" all the way to "delivered", instead of the timer
+  // resetting/re-estimating at every status change. orderEtaAt() is only a
+  // fallback for orders placed before eta_at existed on the orders table.
+  function orderEtaAt(order){
+    if (order.etaAt) return order.etaAt;
+    const deliveryMins = deliveryMinutesFor(order.dropOff);
     if (order.status === 'received'){
-      const ahead = aheadCount(order);
       const aheadMinutes = activeQueue().filter(o=>o.id!==order.id && o.createdAt<order.createdAt).reduce((s,o)=>s+(o.prepMinutes||0),0);
-      const mins = aheadMinutes + order.prepMinutes;
-      return { ahead, ms: mins*60000, mode:'estimate-ready' };
+      return order.createdAt + (aheadMinutes + order.prepMinutes + deliveryMins)*60000;
     }
     if (order.status === 'preparing'){
-      const target = (order.preparingStartedAt || Date.now()) + order.prepMinutes*60000;
-      return { ahead:0, ms: Math.max(0, target - Date.now()), mode:'countdown-ready' };
+      const start = order.preparingStartedAt || order.createdAt;
+      return start + (order.prepMinutes + deliveryMins)*60000;
     }
     if (order.status === 'ready'){
-      const mins = deliveryMinutesFor(order.dropOff);
-      return { ahead:0, ms: mins*60000, mode:'estimate-delivery' };
+      return (order.readyAt || Date.now()) + deliveryMins*60000;
     }
     if (order.status === 'delivering'){
-      const mins = deliveryMinutesFor(order.dropOff);
-      const target = (order.deliveringAt || Date.now()) + mins*60000;
-      return { ahead:0, ms: Math.max(0, target - Date.now()), mode:'countdown-delivery' };
+      return (order.deliveringAt || Date.now()) + deliveryMins*60000;
     }
-    return { ahead:0, ms:0, mode:'done' };
+    return Date.now();
+  }
+  function etaInfo(order){
+    if (order.status==='delivered' || order.status==='cancelled') return { ahead:0, ms:0, mode:'done' };
+    const ahead = order.status==='received' ? aheadCount(order) : 0;
+    const ms = orderEtaAt(order) - Date.now();
+    if (ms > 0) return { ahead, ms, mode:'countdown' };
+    return { ahead, ms: Math.abs(ms), mode:'late' };
   }
   function timerBlock(order, info){
     info = info || etaInfo(order);
     switch(info.mode){
-      case 'estimate-ready':    return { big:'~'+Math.max(1,Math.round(info.ms/60000))+' min', caption:'estimated until ready' };
-      case 'countdown-ready':   return { big: formatCountdown(info.ms), caption:'until ready' };
-      case 'estimate-delivery': return { big:'~'+Math.max(1,Math.round(info.ms/60000))+' min', caption:'estimated until delivered' };
-      case 'countdown-delivery':return { big: formatCountdown(info.ms), caption:'until delivered' };
-      default:                  return { big:'Delivered', caption:'enjoy!' };
+      case 'countdown': return { big: formatCountdown(info.ms), caption:'until delivered' };
+      case 'late':       return { big: 'Running late', caption: formatCountdown(info.ms)+' over estimate' };
+      default:           return { big:'Delivered', caption:'enjoy!' };
     }
   }
 
@@ -873,9 +884,17 @@
       toast('Card payments need a £1 minimum — please have cash ready to pay at the counter.');
     }
     const comment = (state.orderComment||'').trim().slice(0,200);
+    // One fixed ETA computed once, right now, from: how much prep is already
+    // queued ahead of this order + this order's own prep time + the walk to
+    // the drop-off point. This is the single number the whole countdown is
+    // built on — it never gets recalculated as the order moves through
+    // received -> preparing -> ready -> delivering.
+    const aheadMinutes = orders.filter(o=>o.status==='received'||o.status==='preparing').reduce((s,o)=>s+(o.prepMinutes||0),0);
+    const deliveryMins = deliveryMinutesFor(state.dropOff);
+    const etaAt = new Date(Date.now() + (aheadMinutes+prepMinutes+deliveryMins)*60000).toISOString();
     const { data, error } = await sb.from('orders').insert({
       drop_off: state.dropOff, items, total, status:'received', prep_minutes: prepMinutes, verify_code: genVerifyCode(),
-      comment: comment || null
+      comment: comment || null, eta_at: etaAt
     }).select().single();
     if (error){ toast('Could not place order — try again.'); console.error(error); return; }
     upsertOrderLocal(data);
@@ -1317,8 +1336,8 @@
         '<div class="row" style="margin-bottom:10px;"><span class="chip">Point '+order.dropOff+'</span></div>' +
         (order.verifyCode ? '<div class="center" style="margin-bottom:16px;"><div class="verify-label">Your code</div><div class="verify-code-big">'+order.verifyCode+'</div></div>' : '') +
         '<div class="center timer-block">' +
-          '<div class="timer-big mono" id="lh-timer">'+tb.big+'</div>' +
-          '<div class="timer-caption">'+tb.caption+'</div>' +
+          '<div class="timer-big mono'+(info.mode==='late'?' late':'')+'" id="lh-timer">'+tb.big+'</div>' +
+          '<div class="timer-caption'+(info.mode==='late'?' late':'')+'" id="lh-timer-caption">'+tb.caption+'</div>' +
         '</div>' +
         waitStepper(order.status) +
         courierLine +
@@ -1369,8 +1388,9 @@
     const itemCount = order.items.reduce((s,i)=>s+i.qty,0);
     const isLong = itemsText.length > 70 || order.items.length > 4 || (order.comment && order.comment.length > 60);
     const hasTimer = ['received','preparing','ready','delivering'].includes(order.status);
+    const timerInfo = hasTimer ? etaInfo(order) : null;
     const deliverTimer = hasTimer
-      ? '<span class="chip filled deliver-timer" id="dtimer-'+order.id+'">'+timerBlock(order).big+'</span>'
+      ? '<span class="chip filled deliver-timer'+(timerInfo.mode==='late'?' late':'')+'" id="dtimer-'+order.id+'">'+timerBlock(order, timerInfo).big+'</span>'
       : '';
     return '<div class="ticket-mini" data-action="view-order" data-id="'+order.id+'">' +
       '<div class="row between wrap" style="row-gap:6px;"><span class="order-num">#'+order.number+'</span><span class="row wrap" style="gap:6px;row-gap:6px;">'+
@@ -1977,15 +1997,23 @@
   setInterval(()=>{
     if (state.view==='status'){
       const order = orders.find(o=>o.id===state.myOrderId);
-      if (order && (order.status==='preparing' || order.status==='delivering')){
+      if (order && ['received','preparing','ready','delivering'].includes(order.status)){
+        const info = etaInfo(order);
+        const tb = timerBlock(order, info);
         const el = document.getElementById('lh-timer');
-        if (el) el.textContent = timerBlock(order).big;
+        if (el){ el.textContent = tb.big; el.classList.toggle('late', info.mode==='late'); }
+        const capEl = document.getElementById('lh-timer-caption');
+        if (capEl){ capEl.textContent = tb.caption; capEl.classList.toggle('late', info.mode==='late'); }
       }
     }
     if (state.view==='staffBoard'){
       orders.filter(o=>['received','preparing','ready','delivering'].includes(o.status)).forEach(o=>{
         const el = document.getElementById('dtimer-'+o.id);
-        if (el) el.textContent = timerBlock(o).big;
+        if (el){
+          const info = etaInfo(o);
+          el.textContent = timerBlock(o, info).big;
+          el.classList.toggle('late', info.mode==='late');
+        }
       });
     }
   }, 1000);
