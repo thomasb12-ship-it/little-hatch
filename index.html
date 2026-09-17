@@ -151,20 +151,21 @@
 
   .cat-tabs{ display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin-bottom:14px; -ms-overflow-style:none; scrollbar-width:none; }
   .cat-tabs::-webkit-scrollbar{ display:none; }
-  .cat-tab{ flex:0 0 auto; padding:9px 16px; border-radius:999px; border:2px solid var(--line-strong); font-size:13px; font-weight:700; cursor:pointer; background:var(--paper); white-space:nowrap; transition:transform .15s var(--ease-bounce); }
+  .cat-tab{ flex:0 0 auto; padding:9px 16px; border-radius:999px; border:2px solid var(--line-strong); font-size:13px; font-weight:700; cursor:pointer; background:var(--paper); white-space:nowrap; transition:transform .15s var(--ease-bounce), background-color .18s ease, color .18s ease, border-color .18s ease; }
   .cat-tab.active{ background:var(--ink); color:var(--paper); border-color:var(--ink); }
   .cat-tab:active{ transform:scale(.93); }
-  .menu-item{ display:flex; align-items:center; gap:12px; padding:14px 4px 6px; border-bottom:1px solid var(--line); }
+  @keyframes rowIn{ from{ opacity:0; transform:translateY(6px); } to{ opacity:1; transform:translateY(0); } }
+  .menu-item{ display:flex; align-items:center; gap:12px; padding:14px 4px 6px; border-bottom:1px solid var(--line); animation:rowIn .28s var(--ease-bounce) both; }
   .menu-item.has-toppings{ padding-bottom:2px; }
   .menu-item .name{ font-weight:700; font-size:15.5px; }
   .menu-item .price{ color:var(--ink-2); font-size:13.5px; }
   .menu-item.soldout{ opacity:.4; }
   .soldout-chip{ font-size:11px; border:2px solid var(--line-strong); border-radius:999px; padding:2px 9px; text-transform:uppercase; letter-spacing:.06em; font-weight:700; }
-  .qty-ctrl{ display:flex; align-items:center; gap:8px; }
+  .qty-ctrl{ display:flex; align-items:center; gap:8px; animation:rowIn .22s var(--ease-bounce) both; }
   .qty-ctrl .n{ min-width:18px; text-align:center; font-family:var(--font-display); font-weight:700; font-size:16px; transition:transform .25s var(--ease-bounce); }
   .qty-pop{ animation:qtyPop .3s var(--ease-bounce); }
   @keyframes qtyPop{ 0%{transform:scale(1.5);} 100%{transform:scale(1);} }
-  .topping-row{ display:flex; gap:6px; flex-wrap:wrap; align-items:center; justify-content:flex-start; padding:0 4px 12px; border-bottom:1px solid var(--line); }
+  .topping-row{ display:flex; gap:6px; flex-wrap:wrap; align-items:center; justify-content:flex-start; padding:6px 4px; border-bottom:1px solid var(--line); animation:rowIn .3s var(--ease-bounce) both; }
   .topping-chip{
     -webkit-appearance:none; appearance:none; flex:0 0 auto; max-width:100%;
     display:inline-flex; align-items:center; justify-content:center; line-height:1;
@@ -185,7 +186,7 @@
   .basket-bar .btn.btn-primary{ background:var(--paper); color:var(--ink); }
   .basket-bar .btn.btn-primary:active{ background:var(--paper-3); }
 
-  .basket-line{ display:flex; align-items:center; gap:10px; padding:12px 0; border-bottom:1px dashed var(--line); transition:opacity .22s ease, transform .22s ease; }
+  .basket-line{ display:flex; align-items:center; gap:10px; padding:12px 0; border-bottom:1px dashed var(--line); transition:opacity .22s ease, transform .22s ease; animation:rowIn .26s var(--ease-bounce) both; }
   .basket-line:last-of-type{ border-bottom:none; }
   .basket-line.removing{ opacity:0; transform:translateX(20px) scale(.96); pointer-events:none; }
   .basket-line .name{ font-weight:700; }
@@ -841,7 +842,7 @@
     info = info || etaInfo(order);
     switch(info.mode){
       case 'countdown': return { big: formatCountdown(info.ms), caption:'until delivered' };
-      case 'late':       return { big: 'Running late', caption: formatCountdown(info.ms)+' over estimate' };
+      case 'late':       return { big: 'Sorry — nearly there!', caption:'running a little behind schedule' };
       default:           return { big:'Delivered', caption:'enjoy!' };
     }
   }
@@ -1222,7 +1223,7 @@
     let trackBlock = '';
     if (myOrders.length === 1){
       const o = myOrders[0];
-      trackBlock = '<button class="btn btn-primary btn-lg btn-block" data-action="go-status" data-id="'+o.id+'">Track order #'+o.number+' — Point '+o.dropOff+'</button>';
+      trackBlock = '<button class="btn btn-primary btn-lg btn-block" data-action="go-status" data-id="'+o.id+'">Track order #'+o.number+' — Collection point '+o.dropOff+'</button>';
     } else if (myOrders.length > 1){
       const fontSize = Math.max(11, 15 - (myOrders.length-2));
       trackBlock = '<div class="landing-orders-row">' + myOrders.map(o=>
@@ -1279,7 +1280,7 @@
     const items = menuItems.filter(m=>m.category===state.activeCategory);
     return topNav({right:'<button class="btn btn-sm" data-action="go-landing">Cancel</button>'}) +
       orderingStepper(1) +
-      '<div class="row between" style="margin-bottom:2px;"><h2>Menu</h2><span class="chip">Point '+state.dropOff+'</span></div>' +
+      '<div class="row between" style="margin-bottom:2px;"><h2>Menu</h2><span class="chip">Collection point '+state.dropOff+'</span></div>' +
       '<p class="tagline" style="margin-bottom:16px;">Snacks, breakfast and drinks.</p>' +
       '<div class="cat-tabs">' + cats.map(c=>
         '<div class="cat-tab '+(c===state.activeCategory?'active':'')+'" data-action="set-cat" data-cat="'+escapeHtml(c)+'">'+escapeHtml(c)+'</div>'
@@ -1295,7 +1296,7 @@
   function renderBasket(){
     return topNav({right:'<button class="btn btn-sm" data-action="go-landing">Cancel</button>'}) +
       orderingStepper(2) +
-      '<div class="row between" style="margin-bottom:2px;"><h2>Your basket</h2><span class="chip">Point '+state.dropOff+'</span></div>' +
+      '<div class="row between" style="margin-bottom:2px;"><h2>Your basket</h2><span class="chip">Collection point '+state.dropOff+'</span></div>' +
       (state.cart.length===0
         ? '<p class="tagline" style="margin:16px 0;">Your basket is empty.</p><button class="btn" data-action="go-menu">Back to menu</button>'
         : (
@@ -1308,8 +1309,9 @@
             '<div class="ticket-perf"></div>' +
             '<div class="row between"><strong>Total</strong><strong class="mono">'+money(cartTotal())+'</strong></div>' +
           '</div>' +
-          (cartTotal() > 0 && cartTotal() < 1 ? '<div class="error-text center" style="margin-top:14px;">Card payments need a £1 minimum — please bring cash for this order.</div>' : '') +
-          '<p class="tagline center" style="margin-top:14px;">Paying by cash? Sorry, we don\'t carry change, so please bring the exact amount.</p>' +
+          '<p class="tagline center" style="margin-top:14px;">You\'ll pay when your order is delivered to you — we accept both card and cash.</p>' +
+          (cartTotal() > 0 && cartTotal() < 1 ? '<div class="error-text center" style="margin-top:10px;">Card payments need a £1 minimum — please bring cash for this order.</div>' : '') +
+          '<p class="tagline center" style="margin-top:10px;">Paying by cash? Sorry, we don\'t carry change, so please bring the exact amount.</p>' +
           '<div class="note-field" style="margin-top:16px;">' +
             '<label for="order-comment-input">Note for the team (optional)</label>' +
             '<textarea id="order-comment-input" maxlength="200" placeholder="e.g. extra milk in the coffee">'+escapeHtml(state.orderComment||'')+'</textarea>' +
@@ -1336,18 +1338,10 @@
     const notifBtn = window.Notification
       ? '<button class="btn btn-sm '+(state.notifyReady?'chip filled':'')+'" data-action="enable-order-notifs">'+(state.notifyReady?'Notifying you of updates ✓ (tap to turn off)':'Notify me of updates')+'</button>'
       : '';
-    // iOS will only deliver a notification with the browser closed if the app
-    // has been added to the Home Screen first, so say so before they tap.
-    const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    const isStandalone = window.navigator.standalone === true ||
-      (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
-    const iosHint = (isIos && !isStandalone && !state.notifyReady)
-      ? '<p class="tagline center" style="margin-top:8px;font-size:12px;">On iPhone, tap Share → Add to Home Screen first, then open it from there to get alerts with Safari closed.</p>'
-      : '';
 
     return topNav({right:'<button class="btn btn-sm" data-action="go-landing">Home</button>'}) +
       '<div class="ticket">' +
-        '<div class="row" style="margin-bottom:10px;"><span class="chip">Point '+order.dropOff+'</span></div>' +
+        '<div class="row" style="margin-bottom:10px;"><span class="chip">Collection point '+order.dropOff+'</span></div>' +
         (order.verifyCode ? '<div class="center" style="margin-bottom:16px;"><div class="verify-label">Your code</div><div class="verify-code-big">'+order.verifyCode+'</div></div>' : '') +
         '<div class="center timer-block">' +
           '<div class="timer-big mono'+(info.mode==='late'?' late':'')+'" id="lh-timer">'+tb.big+'</div>' +
@@ -1371,7 +1365,7 @@
       '</div>' +
       (order.status==='delivered'
         ? '<button class="btn btn-primary btn-block" style="margin-top:18px;" data-action="new-order">Place another order</button>'
-        : '<div class="center" style="margin-top:16px;">'+notifBtn+'</div>'+iosHint+'<p class="footer-note">This page updates itself — no need to refresh.</p>');
+        : '<div class="center" style="margin-top:16px;">'+notifBtn+'</div><p class="footer-note">This page updates itself — no need to refresh.</p>');
   }
 
   /* ---------------------------- render: staff ---------------------------- */
