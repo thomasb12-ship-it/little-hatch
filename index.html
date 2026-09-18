@@ -74,7 +74,7 @@
   .landing-tagline{ max-width:23ch; margin:0 auto; line-height:1.5; }
   .hero-badge{ width:104px; margin:14px auto 0; display:block; border-radius:14px; }
 
-  .staff-bar{ background:var(--ink); margin:-24px -20px 24px; padding:18px 20px; border-radius:0 0 28px 28px; }
+  .staff-bar{ background:var(--ink); margin:-24px -20px 24px; margin-top:calc(-24px - env(safe-area-inset-top, 0px)); padding:18px 20px; padding-top:calc(18px + env(safe-area-inset-top, 0px)); border-radius:0 0 28px 28px; }
   .staff-bar .btn{ border-color:var(--paper); color:var(--paper); }
   .staff-bar .brand-logo{ height:30px; }
   .staff-bar .mode-pill{ border-color:rgba(255,255,255,.4); color:var(--paper); }
@@ -155,8 +155,8 @@
   .cat-tab.active{ background:var(--ink); color:var(--paper); border-color:var(--ink); }
   .cat-tab:active{ transform:scale(.93); }
   @keyframes rowIn{ from{ opacity:0; transform:translateY(6px); } to{ opacity:1; transform:translateY(0); } }
-  .menu-item{ display:flex; align-items:center; gap:12px; padding:14px 4px 6px; border-bottom:1px solid var(--line); animation:rowIn .28s var(--ease-bounce) both; }
-  .menu-item.has-toppings{ padding-bottom:2px; }
+  .menu-item{ display:flex; align-items:center; gap:12px; padding:14px 4px; border-bottom:1px solid var(--line); animation:rowIn .28s var(--ease-bounce) both; }
+  .menu-item.has-toppings{ padding-bottom:8px; border-bottom:none; }
   .menu-item .name{ font-weight:700; font-size:15.5px; }
   .menu-item .price{ color:var(--ink-2); font-size:13.5px; }
   .menu-item.soldout{ opacity:.4; }
@@ -165,7 +165,7 @@
   .qty-ctrl .n{ min-width:18px; text-align:center; font-family:var(--font-display); font-weight:700; font-size:16px; transition:transform .25s var(--ease-bounce); }
   .qty-pop{ animation:qtyPop .3s var(--ease-bounce); }
   @keyframes qtyPop{ 0%{transform:scale(1.5);} 100%{transform:scale(1);} }
-  .topping-row{ display:flex; gap:6px; flex-wrap:wrap; align-items:center; justify-content:flex-start; padding:6px 4px; border-bottom:1px solid var(--line); animation:rowIn .3s var(--ease-bounce) both; }
+  .topping-row{ display:flex; gap:6px; flex-wrap:wrap; align-items:center; justify-content:flex-start; padding:0 4px 14px; border-bottom:1px solid var(--line); animation:rowIn .3s var(--ease-bounce) both; }
   .topping-chip{
     -webkit-appearance:none; appearance:none; flex:0 0 auto; max-width:100%;
     display:inline-flex; align-items:center; justify-content:center; line-height:1;
@@ -214,6 +214,7 @@
   .chip{ font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; border:2px solid var(--line-strong); border-radius:999px; padding:3px 11px; }
   .chip.filled{ background:var(--ink); color:var(--paper); border-color:var(--ink); }
   .deliver-timer{ font-variant-numeric:tabular-nums; }
+  .late-overtime{ font-variant-numeric:tabular-nums; background:#b8362a; border-color:#b8362a; color:#fff; }
   .cols{ display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:16px; align-items:start; }
   .col{ background:var(--paper-3); border:2px solid var(--line); border-radius:var(--radius-l); padding:14px; min-height:120px; min-width:0; }
   .col-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
@@ -306,6 +307,7 @@
   .verify-code-big{ font-family:var(--font-display); font-weight:800; font-size:clamp(38px,13vw,58px); letter-spacing:.06em; color:var(--ink); line-height:1.15; white-space:nowrap; }
   .verify-code-mid{ font-family:var(--font-display); font-weight:800; font-size:clamp(28px,9vw,38px); letter-spacing:.06em; color:var(--ink); line-height:1.15; white-space:nowrap; }
   .verify-chip{ font-family:var(--font-display); font-weight:700; letter-spacing:.08em; background:var(--paper); border:1.5px dashed var(--line-strong); border-radius:999px; padding:1px 8px; font-size:10.5px; }
+  .verify-code-ticket{ font-family:var(--font-display); font-weight:800; font-size:clamp(22px,7vw,30px); letter-spacing:.06em; color:var(--ink); line-height:1.15; }
 
   .dropoff-tabs{ display:flex; gap:8px; overflow-x:auto; margin-bottom:16px; }
 
@@ -494,6 +496,8 @@
     addStaffError: null,
     newCategoryDraft: false,
     orderComment: '',
+    placingOrder: false,
+    sawBasketPage: false,
     viewingOrderId: null,
     panelsOpen: { menu:false, team:false, timings:false },
     pinAction: null,     // {id, mode:'self'|'admin'}
@@ -554,11 +558,11 @@
   // repeat it — but if they placed an order without ever landing on the
   // basket page seeing it (shouldn't normally happen, but better safe),
   // the tracking page shows it instead so they're never left not knowing.
-  function hasSeenPaymentNote(){
-    try{ return localStorage.getItem('lh_seen_payment_note') === '1'; }catch(e){ return false; }
+  function markOrderSawBasket(orderId){
+    try{ sessionStorage.setItem('lh_basket_seen_'+orderId, '1'); }catch(e){}
   }
-  function markPaymentNoteSeen(){
-    try{ localStorage.setItem('lh_seen_payment_note', '1'); }catch(e){}
+  function orderSawBasket(orderId){
+    try{ return sessionStorage.getItem('lh_basket_seen_'+orderId) === '1'; }catch(e){ return false; }
   }
   function myActiveOrders(){
     const ids = getTrackedOrderIds();
@@ -911,8 +915,16 @@
     const pick = set => set[Math.floor(Math.random()*set.length)];
     return pick(digits) + pick(digits) + pick(letters) + pick(letters) + pick(digits) + pick(letters);
   }
+  function newClientId(){
+    try{ return crypto.randomUUID(); }catch(e){}
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c){
+      const r = Math.random()*16|0, v = c==='x' ? r : (r&0x3|0x8);
+      return v.toString(16);
+    });
+  }
   async function placeOrder(){
     if (!state.cart.length || !state.dropOff) return;
+    if (state.placingOrder) return;
     if (settings.shopOpen===false && !state.staff){ toast('Sorry, we\'re not taking orders today.'); render(); return; }
     const items = state.cart.map(i=>({id:i.id, name:i.name, price:i.price, qty:i.qty, baseId:i.baseId||i.id, toppings:i.toppings||[]}));
     const total = items.reduce((s,i)=>s+i.price*i.qty,0);
@@ -929,17 +941,36 @@
     const aheadMinutes = orders.filter(o=>o.status==='received'||o.status==='preparing').reduce((s,o)=>s+(o.prepMinutes||0),0);
     const deliveryMins = deliveryMinutesFor(state.dropOff);
     const etaAt = new Date(Date.now() + (aheadMinutes+prepMinutes+deliveryMins)*60000).toISOString();
-    const { data, error } = await sb.from('orders').insert({
+    const clientId = newClientId();
+    const orderRow = {
+      id: clientId,
       drop_off: state.dropOff, items, total, status:'received', prep_minutes: prepMinutes, verify_code: genVerifyCode(),
       comment: comment || null, eta_at: etaAt
-    }).select().single();
-    if (error){ toast('Could not place order — try again.'); console.error(error); return; }
+    };
+    state.placingOrder = true;
+    render();
+    let { data, error } = await sb.from('orders').upsert(orderRow).select().single();
+    if (error){
+      // A blind retry on a plain insert could create a duplicate order, but
+      // upserting the SAME client-generated id twice is always safe: it
+      // either creates the row once, or (if the first attempt actually did
+      // go through despite the error) quietly no-ops onto it.
+      ({ data, error } = await sb.from('orders').upsert(orderRow).select().single());
+    }
+    if (error){
+      state.placingOrder = false;
+      toast('Could not place order — try again.'); console.error(error); render(); return;
+    }
     upsertOrderLocal(data);
     prevStatusMap.set(data.id, 'received');
     addTrackedOrderId(data.id);
     state.myOrderId = data.id;
+    const sawBasket = state.sawBasketPage;
     state.cart = [];
     state.orderComment = '';
+    state.placingOrder = false;
+    state.sawBasketPage = false;
+    if (sawBasket) markOrderSawBasket(data.id);
     go('status');
   }
 
@@ -961,6 +992,16 @@
   function activeToppingsFor(baseId){
     const line = activeCartLineFor(baseId);
     return line ? (line.toppings || []) : [];
+  }
+  function cartBaseQty(baseId){
+    return state.cart.reduce((s,l)=>s+(l.baseId===baseId?l.qty:0),0);
+  }
+  function decrementActiveLine(baseId){
+    const line = activeCartLineFor(baseId);
+    if (!line) return;
+    line.qty--;
+    if (line.qty<=0) state.cart = state.cart.filter(l=>l!==line);
+    renderAfterCartChange();
   }
   function addToCart(item){
     const line = state.cart.find(i=>i.id===item.id);
@@ -1314,7 +1355,7 @@
   }
 
   function renderMenuItem(item){
-    const qty = cartQty(item.id);
+    const qty = cartBaseQty(item.id);
     if (!item.available){
       return '<div class="menu-item soldout"><div class="grow"><div class="name">'+escapeHtml(item.name)+'</div><div class="price">'+money(item.price)+'</div></div><span class="soldout-chip">Sold out</span></div>';
     }
@@ -1322,7 +1363,7 @@
     let html = '<div class="menu-item'+(hasT?' has-toppings':'')+'">' +
       '<div class="grow"><div class="name">'+escapeHtml(item.name)+'</div><div class="price">'+money(item.price)+'</div></div>' +
       (qty>0
-        ? '<div class="qty-ctrl"><button class="icon-btn" data-action="cart-minus" data-id="'+item.id+'">'+ICON_MINUS+'</button><span class="n" id="qn-'+item.id+'">'+qty+'</span><button class="icon-btn" data-action="cart-plus" data-id="'+item.id+'">'+ICON_PLUS+'</button></div>'
+        ? '<div class="qty-ctrl"><button class="icon-btn" data-action="cart-minus-base" data-id="'+item.id+'">'+ICON_MINUS+'</button><span class="n" id="qn-base-'+item.id+'">'+qty+'</span><button class="icon-btn" data-action="cart-plus" data-id="'+item.id+'">'+ICON_PLUS+'</button></div>'
         : '<button class="btn btn-sm" data-action="cart-plus" data-id="'+item.id+'">Add</button>') +
       '</div>';
     if (hasT){
@@ -1355,7 +1396,7 @@
   }
 
   function renderBasket(){
-    if (state.cart.length) markPaymentNoteSeen();
+    if (state.cart.length) state.sawBasketPage = true;
     return topNav({right:'<button class="btn btn-sm" data-action="go-landing">Cancel</button>'}) +
       orderingStepper(2) +
       '<div class="row between" style="margin-bottom:2px;"><h2>Your basket</h2><span class="chip">Collection point '+state.dropOff+'</span></div>' +
@@ -1401,10 +1442,10 @@
     const notifBtn = window.Notification
       ? '<button class="btn btn-sm '+(state.notifyReady?'chip filled':'')+'" data-action="enable-order-notifs">'+(state.notifyReady?'Notifying you of updates ✓ (tap to turn off)':'Notify me of updates')+'</button>'
       : '';
-    // Only repeat the card/cash payment note here if they never saw it on
-    // the basket page — once shown (on either page) it's marked seen for good.
-    const showPaymentNote = !hasSeenPaymentNote();
-    if (showPaymentNote) markPaymentNoteSeen();
+    // This order shows the note only if IT never passed through the basket
+    // page before being placed — decided once at placement time, so it's
+    // consistent for this order's whole tracking lifetime.
+    const showPaymentNote = !orderSawBasket(order.id);
     const paymentNoteHtml = showPaymentNote
       ? '<p class="tagline center" style="margin-top:14px;">You\'ll pay when your order is delivered to you — we accept both card and cash.</p>'
       : '';
@@ -1468,14 +1509,26 @@
     const isLong = itemsText.length > 70 || order.items.length > 4 || (order.comment && order.comment.length > 60);
     const hasTimer = ['received','preparing','ready','delivering'].includes(order.status);
     const timerInfo = hasTimer ? etaInfo(order) : null;
+    const isLate = !!(timerInfo && timerInfo.mode==='late');
     const deliverTimer = hasTimer
-      ? '<span class="chip filled deliver-timer'+(timerInfo.mode==='late'?' late':'')+'" id="dtimer-'+order.id+'">'+timerBlock(order, timerInfo).big+'</span>'
+      ? '<span class="chip filled deliver-timer'+(isLate?' late':'')+'" id="dtimer-'+order.id+'">'+timerBlock(order, timerInfo).big+'</span>'
+        // The customer sees the friendly "Sorry — nearly there!" message, but
+        // staff need the actual number — a live running "+M:SS" of how far
+        // past the estimate this order now is, so they can prioritise.
+        + (isLate ? '<span class="chip filled late-overtime" id="dtimer-over-'+order.id+'">+'+formatCountdown(timerInfo.ms)+'</span>' : '')
+      : '';
+    // Once an order is out for delivery, the courier needs to match the
+    // customer's spoken code at a glance — so it gets its own large,
+    // impossible-to-misread line instead of the small corner chip.
+    const bigCode = (order.status==='delivering' && order.verifyCode)
+      ? '<div class="center" style="margin:6px 0 2px;"><div class="verify-code-ticket mono">'+order.verifyCode+'</div></div>'
       : '';
     return '<div class="ticket-mini" data-action="view-order" data-id="'+order.id+'">' +
       '<div class="row between wrap" style="row-gap:6px;"><span class="order-num">#'+order.number+'</span><span class="row wrap" style="gap:6px;row-gap:6px;">'+
         '<span class="chip">Point '+order.dropOff+'</span>'+(order.verifyCode?'<span class="verify-chip">'+order.verifyCode+'</span>':'')+deliverTimer+
       '</span></div>' +
       '<div class="order-meta">'+itemCount+' item'+(itemCount>1?'s':'')+' · '+money(order.total)+' · <span class="waited">'+timeSince(order.createdAt)+'</span></div>' +
+      bigCode +
       '<div class="order-items'+(isLong?' clamped':'')+'">' + itemsText + '</div>' +
       (order.comment ? '<div class="order-note-badge'+(isLong?' clamped':'')+'">📝 '+escapeHtml(order.comment)+'</div>' : '') +
       (isLong ? '<div class="ticket-more-hint">··· tap for full order</div>' : '') +
@@ -1868,6 +1921,10 @@
     const el = document.getElementById('qn-'+id);
     if (el){ el.classList.remove('qty-pop'); void el.offsetWidth; el.classList.add('qty-pop'); }
   }
+  function popBaseQty(id){
+    const el = document.getElementById('qn-base-'+id);
+    if (el){ el.classList.remove('qty-pop'); void el.offsetWidth; el.classList.add('qty-pop'); }
+  }
 
   async function onDropoffSubmit(e){
     e.preventDefault();
@@ -1930,7 +1987,7 @@
     switch(action){
       case 'go-landing': go('landing'); break;
       case 'staff-logo': staffLogoTap(); break;
-      case 'go-dropoff': go('dropoff'); break;
+      case 'go-dropoff': state.sawBasketPage = false; go('dropoff'); break;
       case 'go-menu': go('menu'); break;
       case 'go-basket': go('basket'); break;
       case 'go-status': go('status', btn.dataset.id ? { myOrderId: btn.dataset.id } : {}); break;
@@ -1942,7 +1999,14 @@
       case 'set-cat': state.activeCategory = btn.dataset.cat; render(); break;
       case 'cart-plus': {
         const item = menuItems.find(m=>m.id===btn.dataset.id);
-        if (item && item.available){ addToCart(item); popQty(item.id); bumpBasket(); }
+        if (item && item.available){ addToCart(item); popBaseQty(item.id); bumpBasket(); }
+        break;
+      }
+      case 'cart-minus-base': {
+        const id = btn.dataset.id;
+        decrementActiveLine(id);
+        popBaseQty(id);
+        bumpBasket();
         break;
       }
       case 'cart-plus-raw':
@@ -2139,6 +2203,11 @@
           el.textContent = timerBlock(o, info).big;
           el.classList.toggle('late', info.mode==='late');
         }
+        const overEl = document.getElementById('dtimer-over-'+o.id);
+        if (overEl){
+          const info = etaInfo(o);
+          if (info.mode==='late') overEl.textContent = '+'+formatCountdown(info.ms);
+        }
       });
     }
   }, 1000);
@@ -2202,12 +2271,25 @@
 
   // The staff board lives on its own quiet URL rather than a link on the
   // landing page. The PIN is still what actually guards it.
-  const lhPath = location.pathname.toLowerCase();
-  if (location.hash === '#staff' || lhPath.indexOf('staff-for-the-hatch') !== -1){
+  function isStaffUrl(){
+    const p = location.pathname.toLowerCase();
+    return location.hash === '#staff' || p.indexOf('staff-for-the-hatch') !== -1;
+  }
+  if (isStaffUrl()){
     state.view = 'staffLogin';
   }
   render(true);
   initSupabase();
+  // A back/forward navigation can be served straight from the browser's
+  // bfcache instead of re-running this script — which would leave whatever
+  // page was showing before frozen on screen even though the address bar
+  // now reads the staff URL. Catch that and force the sign-in screen back up.
+  window.addEventListener('pageshow', function(e){
+    if (e.persisted && isStaffUrl() && !['staffLogin','staffMode','staffBoard'].includes(state.view)){
+      state.view = 'staffLogin';
+      render(true);
+    }
+  });
 
 </script>
 
