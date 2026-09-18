@@ -64,6 +64,7 @@
   .top-nav{ display:flex; align-items:center; justify-content:space-between; margin-bottom:22px; gap:12px; }
   .top-nav .brand{ display:flex; align-items:center; gap:8px; cursor:pointer; }
   .brand-logo{ height:36px; width:auto; display:block; }
+  .top-order-num{ font-family:var(--font-display); font-weight:700; font-size:13px; color:var(--ink-2); background:var(--paper-2); border:1.5px solid var(--line-strong); border-radius:999px; padding:2px 9px; }
   #app.fade-in .brand-logo{ animation:lhBootPop .5s var(--ease-bounce) both; }
   @media (prefers-reduced-motion:reduce){
     #app.fade-in .brand-logo{ animation:none; }
@@ -156,7 +157,10 @@
   .cat-tab:active{ transform:scale(.93); }
   @keyframes rowIn{ from{ opacity:0; transform:translateY(6px); } to{ opacity:1; transform:translateY(0); } }
   .menu-item{ display:flex; align-items:center; gap:12px; padding:14px 4px; border-bottom:1px solid var(--line); animation:rowIn .28s var(--ease-bounce) both; }
-  .menu-item.has-toppings{ padding-bottom:8px; border-bottom:none; }
+  /* The toppings row now lives inside the same .grow column as the name and
+     price (see renderMenuItem), so the Add/quantity control on the right —
+     centered by this row's own align-items — sits in the middle of the
+     WHOLE item block, toppings included, rather than pinned up by the name. */
   .menu-item .name{ font-weight:700; font-size:15.5px; }
   .menu-item .price{ color:var(--ink-2); font-size:13.5px; }
   .menu-item.soldout{ opacity:.4; }
@@ -165,7 +169,7 @@
   .qty-ctrl .n{ min-width:18px; text-align:center; font-family:var(--font-display); font-weight:700; font-size:16px; transition:transform .25s var(--ease-bounce); }
   .qty-pop{ animation:qtyPop .3s var(--ease-bounce); }
   @keyframes qtyPop{ 0%{transform:scale(1.5);} 100%{transform:scale(1);} }
-  .topping-row{ display:flex; gap:6px; flex-wrap:wrap; align-items:center; justify-content:flex-start; padding:0 4px 14px; border-bottom:1px solid var(--line); animation:rowIn .3s var(--ease-bounce) both; }
+  .topping-row{ display:flex; gap:6px; flex-wrap:wrap; align-items:center; justify-content:flex-start; margin-top:8px; animation:rowIn .3s var(--ease-bounce) both; }
   .topping-chip{
     -webkit-appearance:none; appearance:none; flex:0 0 auto; max-width:100%;
     display:inline-flex; align-items:center; justify-content:center; line-height:1;
@@ -181,12 +185,16 @@
   /* Cart add/remove re-renders the whole page, which used to replay every
      row's entrance animation and make the menu look like it jumped. render()
      marks those redraws with #app.no-row-anim so only a genuine page
-     navigation or category-tab switch plays the entrance animation. */
+     navigation or category-tab switch plays the entrance animation. The same
+     class is used on the admin board's quiet re-renders (an order advancing,
+     the shop toggle, a realtime update landing) so the whole ticket list
+     doesn't flash and replay every time something elsewhere changes. */
   #app.no-row-anim .menu-item,
   #app.no-row-anim .topping-row,
   #app.no-row-anim .qty-ctrl,
   #app.no-row-anim .basket-line,
-  #app.no-row-anim .basket-bar{ animation:none; }
+  #app.no-row-anim .basket-bar,
+  #app.no-row-anim .ticket-mini{ animation:none; }
 
   /* Switching category tabs changes how tall the list above it is, so the
      sticky bottom bar used to just snap to its new spot. Giving it its own
@@ -642,12 +650,18 @@
   }
 
   function subscribeRealtime(){
+    // Every one of these fires constantly during normal use — a customer
+    // placing an order, staff advancing one, a menu/timings/shop-toggle edit
+    // (including the admin's own, bouncing back from the database) — so a
+    // plain render() here used to replay every ticket's entrance animation
+    // and make the whole admin board flash on any unrelated change. These
+    // are all quiet re-renders; a genuine navigation still gets the real one.
     sb.channel('lh-orders')
       .on('postgres_changes', {event:'*', schema:'public', table:'orders'}, payload=>{
         if (payload.eventType==='DELETE'){ orders = orders.filter(o=>o.id!==payload.old.id); }
         else { upsertOrderLocal(payload.new); }
         handleOrderAlerts();
-        render();
+        renderQuiet();
       })
       .on('postgres_changes', {event:'*', schema:'public', table:'menu_items'}, payload=>{
         if (payload.eventType==='DELETE'){ menuItems = menuItems.filter(m=>m.id!==payload.old.id); }
@@ -657,7 +671,7 @@
           if (i>=0) menuItems[i]=mapped; else menuItems.push(mapped);
           menuItems.sort((a,b)=>a.sort-b.sort);
         }
-        render();
+        renderQuiet();
       })
       .on('postgres_changes', {event:'*', schema:'public', table:'settings'}, payload=>{
         if (payload.new){
@@ -669,7 +683,7 @@
             toppingPrepSeconds: payload.new.topping_prep_seconds!=null ? payload.new.topping_prep_seconds : 5
           };
         }
-        render();
+        renderQuiet();
       })
       .on('postgres_changes', {event:'*', schema:'public', table:'delivery_points'}, payload=>{
         if (payload.eventType==='DELETE'){ deliveryPoints = deliveryPoints.filter(p=>p.dropOff!==payload.old.drop_off); }
@@ -678,7 +692,7 @@
           const i = deliveryPoints.findIndex(p=>p.dropOff===mapped.dropOff);
           if (i>=0) deliveryPoints[i]=mapped; else deliveryPoints.push(mapped);
         }
-        render();
+        renderQuiet();
       })
       .subscribe();
   }
@@ -1101,15 +1115,15 @@
       state.addStaffError = /duplicate|unique|23505/i.test((error.code||'')+' '+(error.message||''))
         ? 'That name is already taken — try a different one.'
         : 'Could not add teammate — please try again.';
-      render();
+      renderQuiet();
       return;
     }
     state.addingStaff = false; state.addStaffError = null;
-    await refreshStaffList(); render();
+    await refreshStaffList(); renderQuiet();
   }
   async function toggleStaffActive(id, current){
     const { error } = await sb.rpc('set_staff_active', { p_target_id:id, p_active: !current, p_admin_pin_hash: state.staff.pinHash });
-    if (!error) { await refreshStaffList(); render(); }
+    if (!error) { await refreshStaffList(); renderQuiet(); }
   }
   async function deleteStaffAccount(id, name){
     if (!window.confirm('Remove '+name+' from the team? This can\'t be undone.')) return;
@@ -1120,16 +1134,16 @@
     }
     await refreshStaffList();
     toast(name+' removed from the team');
-    render();
+    renderQuiet();
   }
   async function renameStaffAccount(id, newName){
-    if (!newName){ state.renameError = 'Enter a name.'; render(); return; }
+    if (!newName){ state.renameError = 'Enter a name.'; renderQuiet(); return; }
     const { data, error } = await sb.rpc('rename_staff_account', { p_target_id:id, p_new_name:newName, p_admin_pin_hash: state.staff.pinHash });
     if (error || !data){
       state.renameError = /duplicate|unique|23505/i.test((error&&error.code||'')+' '+(error&&error.message||''))
         ? 'That name is already taken — try a different one.'
         : 'Could not rename that teammate — try again.';
-      render();
+      renderQuiet();
       return;
     }
     if (id === state.staff.id){
@@ -1139,36 +1153,36 @@
     state.renameAction = null; state.renameError = null;
     await refreshStaffList();
     toast('Name updated');
-    render();
+    renderQuiet();
   }
   async function changeOwnPin(oldPin, newPin){
-    if (!oldPin || !newPin){ state.pinActionError = 'Enter both your current and new PIN.'; render(); return; }
+    if (!oldPin || !newPin){ state.pinActionError = 'Enter both your current and new PIN.'; renderQuiet(); return; }
     const oldHash = await sha256Hex(oldPin);
     const newHash = await sha256Hex(newPin);
     const { data, error } = await sb.rpc('update_staff_pin', { p_name: state.staff.name, p_old_pin_hash: oldHash, p_new_pin_hash: newHash });
     if (error || !data){
       state.pinActionError = 'Current PIN not recognised — try again.';
-      render();
+      renderQuiet();
       return;
     }
     state.staff.pinHash = newHash;
     try{ sessionStorage.setItem('lh_staff', JSON.stringify(state.staff)); }catch(e){}
     state.pinAction = null; state.pinActionError = null;
     toast('PIN updated');
-    render();
+    renderQuiet();
   }
   async function adminResetPin(targetId, newPin){
-    if (!newPin){ state.pinActionError = 'Enter a new PIN.'; render(); return; }
+    if (!newPin){ state.pinActionError = 'Enter a new PIN.'; renderQuiet(); return; }
     const newHash = await sha256Hex(newPin);
     const { error } = await sb.rpc('admin_reset_staff_pin', { p_target_id: targetId, p_new_pin_hash: newHash, p_admin_pin_hash: state.staff.pinHash });
     if (error){
       state.pinActionError = 'Could not reset that PIN — try again.';
-      render();
+      renderQuiet();
       return;
     }
     state.pinAction = null; state.pinActionError = null;
     toast('PIN reset — let them know their new PIN');
-    render();
+    renderQuiet();
   }
   async function setOrderStatus(orderId, patch){
     const { error } = await sb.from('orders').update(patch).eq('id', orderId);
@@ -1198,21 +1212,21 @@
   async function saveItemPrepSeconds(id, seconds){
     const item = menuItems.find(m=>m.id===id);
     if (item) item.prepSeconds = seconds;
-    render();
+    renderQuiet();
     const { error } = await sb.from('menu_items').update({ prep_seconds: seconds }).eq('id', id);
     if (error) toast('Could not save prep time — try again.');
   }
   async function saveDeliveryPointMinutes(dropOff, minutes){
     const i = deliveryPoints.findIndex(p=>p.dropOff===dropOff);
     if (i>=0) deliveryPoints[i].minutes = minutes; else deliveryPoints.push({ dropOff, minutes });
-    render();
+    renderQuiet();
     const { error } = await sb.from('delivery_points').upsert({ drop_off: dropOff, minutes });
     if (error) toast('Could not save delivery time — try again.');
   }
   async function toggleShopOpen(){
     const next = !(settings.shopOpen!==false);
     const { error } = await sb.from('settings').update({ shop_open: next }).eq('id',1);
-    if (!error){ settings.shopOpen = next; render(); }
+    if (!error){ settings.shopOpen = next; renderQuiet(); }
   }
   async function saveTimingSettings(bufferVal, roundVal, toppingSecVal){
     const buffer = Math.max(0, Math.min(180, Number(bufferVal)));
@@ -1220,7 +1234,7 @@
     const toppingSec = Math.max(0, Math.min(60, Number(toppingSecVal)||0));
     settings = Object.assign({}, settings, { adminBufferSeconds: buffer, roundToMinutes: round, toppingPrepSeconds: toppingSec });
     toast('Timing settings updated');
-    render();
+    renderQuiet();
     const { error } = await sb.from('settings').update({ admin_buffer_seconds: buffer, round_to_minutes: round, topping_prep_seconds: toppingSec }).eq('id',1);
     if (error) toast('Could not save timing settings — try again.');
   }
@@ -1235,7 +1249,7 @@
     const mySort = item.sort, otherSort = other.sort;
     item.sort = otherSort; other.sort = mySort;
     menuItems.sort((a,b)=>a.sort-b.sort);
-    render();
+    renderQuiet();
     await Promise.all([
       sb.from('menu_items').update({ sort: item.sort }).eq('id', item.id),
       sb.from('menu_items').update({ sort: other.sort }).eq('id', other.id)
@@ -1260,7 +1274,7 @@
   /* ---------------------------- shared render bits ---------------------------- */
   function topNav(opts){
     opts = opts||{};
-    return '<div class="top-nav"><div class="brand" data-action="go-landing"><img src="'+LOGO_BLACK+'" alt="The Little Hatch" class="brand-logo"></div>'+(opts.right||'')+'</div>';
+    return '<div class="top-nav"><div class="brand" data-action="go-landing"><img src="'+LOGO_BLACK+'" alt="The Little Hatch" class="brand-logo">'+(opts.left||'')+'</div>'+(opts.right||'')+'</div>';
   }
   function topNavStaff(opts){
     opts = opts||{};
@@ -1360,21 +1374,26 @@
       return '<div class="menu-item soldout"><div class="grow"><div class="name">'+escapeHtml(item.name)+'</div><div class="price">'+money(item.price)+'</div></div><span class="soldout-chip">Sold out</span></div>';
     }
     const hasT = item.toppings && item.toppings.length;
-    let html = '<div class="menu-item'+(hasT?' has-toppings':'')+'">' +
-      '<div class="grow"><div class="name">'+escapeHtml(item.name)+'</div><div class="price">'+money(item.price)+'</div></div>' +
-      (qty>0
-        ? '<div class="qty-ctrl"><button class="icon-btn" data-action="cart-minus-base" data-id="'+item.id+'">'+ICON_MINUS+'</button><span class="n" id="qn-base-'+item.id+'">'+qty+'</span><button class="icon-btn" data-action="cart-plus" data-id="'+item.id+'">'+ICON_PLUS+'</button></div>'
-        : '<button class="btn btn-sm" data-action="cart-plus" data-id="'+item.id+'">Add</button>') +
-      '</div>';
+    let toppingsHtml = '';
     if (hasT){
       const tPrice = item.toppingPrice!=null ? item.toppingPrice : 0.5;
       const priceLabel = tPrice>0 ? ' '+money(tPrice) : '';
       const activeToppings = activeToppingsFor(item.id);
-      html += '<div class="topping-row">' + item.toppings.map(t=>
+      toppingsHtml = '<div class="topping-row">' + item.toppings.map(t=>
         '<button class="topping-chip'+(activeToppings.includes(t)?' selected':'')+'" data-action="cart-plus-topping" data-base="'+item.id+'" data-topping="'+encodeURIComponent(t)+'"><span>+ '+escapeHtml(t)+priceLabel+'</span></button>'
       ).join('') + '</div>';
     }
-    return html;
+    // The toppings row lives inside the same .grow column as the name/price
+    // (rather than as a separate full-width row) so the whole item — name,
+    // price and toppings together — is one flex item that the Add/quantity
+    // control on the right centers itself against, instead of only ever
+    // lining up with the name text on the first line.
+    return '<div class="menu-item'+(hasT?' has-toppings':'')+'">' +
+      '<div class="grow"><div class="name">'+escapeHtml(item.name)+'</div><div class="price">'+money(item.price)+'</div>' + toppingsHtml + '</div>' +
+      (qty>0
+        ? '<div class="qty-ctrl"><button class="icon-btn" data-action="cart-minus-base" data-id="'+item.id+'">'+ICON_MINUS+'</button><span class="n" id="qn-base-'+item.id+'">'+qty+'</span><button class="icon-btn" data-action="cart-plus" data-id="'+item.id+'">'+ICON_PLUS+'</button></div>'
+        : '<button class="btn btn-sm" data-action="cart-plus" data-id="'+item.id+'">Add</button>') +
+      '</div>';
   }
 
   function renderMenu(){
@@ -1450,7 +1469,7 @@
       ? '<p class="tagline center" style="margin-top:14px;">You\'ll pay when your order is delivered to you — we accept both card and cash.</p>'
       : '';
 
-    return topNav({right:'<button class="btn btn-sm" data-action="go-landing">Home</button>'}) +
+    return topNav({left:'<span class="top-order-num">#'+order.number+'</span>', right:'<button class="btn btn-sm" data-action="go-landing">Home</button>'}) +
       '<div class="ticket">' +
         '<div class="row" style="margin-bottom:10px;"><span class="chip">Collection point '+order.dropOff+'</span></div>' +
         (order.verifyCode ? '<div class="center" style="margin-bottom:16px;"><div class="verify-label">Your code</div><div class="verify-code-big">'+order.verifyCode+'</div></div>' : '') +
@@ -1817,11 +1836,14 @@
     const modes = ['cafe','delivery','both'];
     return topNavStaff({right:'<button class="btn btn-sm" data-action="staff-signout">Sign out</button>'}) +
       '<div class="row between wrap" style="margin-bottom:6px;"><span class="tagline">Signed in as <strong>'+escapeHtml(state.staff.name)+'</strong></span>'+notifBtn+'</div>' +
-      (state.staff.isAdmin ? renderShopStatusBar() : '') +
       '<div class="mode-switch">' + modes.map(m=>'<button class="mode-pill '+(state.staffMode===m?'active':'')+'" data-action="set-staff-mode" data-mode="'+m+'">'+cap(m)+'</button>').join('') + '</div>' +
       ((state.staffMode==='cafe'||state.staffMode==='both') ? renderCafeSection() : '') +
       ((state.staffMode==='delivery'||state.staffMode==='both') ? renderDeliverySection() : '') +
       (state.staff.isAdmin ? renderMenuPanel()+renderTimingsPanel()+renderTeamPanel() : '') +
+      // The open/closed toggle is a rare, deliberate switch rather than
+      // something to glance at constantly, so it sits at the very bottom,
+      // out of the way of the queue and panels above.
+      (state.staff.isAdmin ? renderShopStatusBar() : '') +
       renderOrderModal();
   }
 
@@ -1835,7 +1857,12 @@
   // while still keeping full entrance animation for a real page navigation
   // or a category-tab switch.
   let cartOnlyRender = false;
-  function renderAfterCartChange(){
+  // Used for any re-render that's just a state tweak rather than a genuine
+  // navigation or content switch — cart add/remove, and on the admin side an
+  // order advancing, the shop toggle, or a realtime update landing while
+  // the board is open. Keeps the scroll position and skips every row/ticket's
+  // entrance animation so the rest of the screen doesn't flash and replay.
+  function renderQuiet(){
     const scrollY = window.scrollY;
     cartOnlyRender = true;
     render();
@@ -2071,11 +2098,11 @@
       case 'enable-staff-notifs':
         if (window.Notification){
           if (state.staffAlertsOn && Notification.permission==='granted'){
-            state.staffAlertsOn = false; try{ sessionStorage.setItem('lh_staff_alerts','0'); }catch(err){} render();
+            state.staffAlertsOn = false; try{ sessionStorage.setItem('lh_staff_alerts','0'); }catch(err){} renderQuiet();
           } else if (Notification.permission === 'granted'){
-            state.staffAlertsOn = true; try{ sessionStorage.setItem('lh_staff_alerts','1'); }catch(err){} render();
+            state.staffAlertsOn = true; try{ sessionStorage.setItem('lh_staff_alerts','1'); }catch(err){} renderQuiet();
           } else {
-            Notification.requestPermission().then(p=>{ state.staffAlertsOn = p==='granted'; try{ sessionStorage.setItem('lh_staff_alerts', state.staffAlertsOn?'1':'0'); }catch(err){} render(); });
+            Notification.requestPermission().then(p=>{ state.staffAlertsOn = p==='granted'; try{ sessionStorage.setItem('lh_staff_alerts', state.staffAlertsOn?'1':'0'); }catch(err){} renderQuiet(); });
           }
         }
         break;
@@ -2102,15 +2129,15 @@
         const row = btn.closest('.menu-admin-row');
         if (row){
           row.classList.add('removing');
-          setTimeout(()=>{ menuItems = menuItems.filter(m=>m.id!==id); render(); }, 220);
+          setTimeout(()=>{ menuItems = menuItems.filter(m=>m.id!==id); renderQuiet(); }, 220);
         } else {
-          menuItems = menuItems.filter(m=>m.id!==id); render();
+          menuItems = menuItems.filter(m=>m.id!==id); renderQuiet();
         }
         deleteMenuItem(id);
         break;
       }
-      case 'add-new-category': state.newCategoryDraft = true; render(); break;
-      case 'cancel-new-category': state.newCategoryDraft = false; render(); break;
+      case 'add-new-category': state.newCategoryDraft = true; renderQuiet(); break;
+      case 'cancel-new-category': state.newCategoryDraft = false; renderQuiet(); break;
       case 'add-menu-item': {
         const name = document.getElementById('new-item-name').value.trim();
         const newCatInput = document.getElementById('new-item-category-new');
@@ -2130,13 +2157,13 @@
         break;
       }
       case 'delete-staff': deleteStaffAccount(btn.dataset.id, btn.dataset.name); break;
-      case 'show-add-staff': state.addingStaff = true; state.addStaffError = null; render(); break;
-      case 'cancel-add-staff': state.addingStaff = false; state.addStaffError = null; render(); break;
-      case 'show-change-pin': state.pinAction = { id: btn.dataset.id, mode:'self' }; state.pinActionError = null; render(); break;
-      case 'show-reset-pin': state.pinAction = { id: btn.dataset.id, mode:'admin' }; state.pinActionError = null; render(); break;
-      case 'cancel-pin-action': state.pinAction = null; state.pinActionError = null; render(); break;
-      case 'show-rename-staff': state.renameAction = { id: btn.dataset.id }; state.renameError = null; render(); break;
-      case 'cancel-rename-staff': state.renameAction = null; state.renameError = null; render(); break;
+      case 'show-add-staff': state.addingStaff = true; state.addStaffError = null; renderQuiet(); break;
+      case 'cancel-add-staff': state.addingStaff = false; state.addStaffError = null; renderQuiet(); break;
+      case 'show-change-pin': state.pinAction = { id: btn.dataset.id, mode:'self' }; state.pinActionError = null; renderQuiet(); break;
+      case 'show-reset-pin': state.pinAction = { id: btn.dataset.id, mode:'admin' }; state.pinActionError = null; renderQuiet(); break;
+      case 'cancel-pin-action': state.pinAction = null; state.pinActionError = null; renderQuiet(); break;
+      case 'show-rename-staff': state.renameAction = { id: btn.dataset.id }; state.renameError = null; renderQuiet(); break;
+      case 'cancel-rename-staff': state.renameAction = null; state.renameError = null; renderQuiet(); break;
       case 'submit-rename-staff': {
         const newName = document.getElementById('rename-staff-input').value.trim();
         renameStaffAccount(state.renameAction.id, newName);
@@ -2165,12 +2192,12 @@
       case 'add-staff': {
         const name = document.getElementById('new-staff-name').value.trim();
         const pin = document.getElementById('new-staff-pin').value.trim();
-        if (!name || !pin){ state.addStaffError = 'Enter a name and PIN for your new teammate.'; render(); break; }
+        if (!name || !pin){ state.addStaffError = 'Enter a name and PIN for your new teammate.'; renderQuiet(); break; }
         addStaffAccount(name, pin);
         break;
       }
-      case 'view-order': state.viewingOrderId = btn.dataset.id; render(); break;
-      case 'close-order-modal': state.viewingOrderId = null; render(); break;
+      case 'view-order': state.viewingOrderId = btn.dataset.id; renderQuiet(); break;
+      case 'close-order-modal': state.viewingOrderId = null; renderQuiet(); break;
       case 'noop': break;
       case 'save-timing-settings': {
         const bufferInput = document.getElementById('admin-buffer-input');
