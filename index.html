@@ -1015,12 +1015,12 @@
     if (!line) return;
     line.qty--;
     if (line.qty<=0) state.cart = state.cart.filter(l=>l!==line);
-    renderAfterCartChange();
+    renderQuiet();
   }
   function addToCart(item){
     const line = state.cart.find(i=>i.id===item.id);
     if (line) line.qty++; else state.cart.push({ id:item.id, name:item.name, price:item.price, qty:1, baseId:item.id, toppings:[] });
-    renderAfterCartChange();
+    renderQuiet();
   }
   // Tapping a topping chip toggles it on the active unit of the base item —
   // add it if the active unit doesn't have it yet (e.g. Crumpet -> +Jam ->
@@ -1050,7 +1050,7 @@
         price: base.price + newToppings.length*tPrice, qty:1, toppings:newToppings
       });
     }
-    renderAfterCartChange();
+    renderQuiet();
     return true;
   }
   function removeFromCart(id){
@@ -1058,7 +1058,7 @@
     if (!line) return;
     line.qty--;
     if (line.qty<=0) state.cart = state.cart.filter(i=>i.id!==id);
-    renderAfterCartChange();
+    renderQuiet();
   }
   function cartTotal(){ return state.cart.reduce((s,i)=>s+i.price*i.qty,0); }
   function cartCount(){ return state.cart.reduce((s,i)=>s+i.qty,0); }
