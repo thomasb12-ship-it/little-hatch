@@ -480,7 +480,7 @@
     const buffer = (settings && settings.adminBufferSeconds!=null) ? settings.adminBufferSeconds : 30;
     const roundTo = (settings && settings.roundToMinutes) || 1;
     const minutes = Math.ceil(((totalSeconds+buffer)/60) / roundTo) * roundTo;
-    return Math.max(1, Math.min(30, minutes));
+    return Math.round(Math.max(1, Math.min(30, minutes)));
   }
   function deliveryMinutesFor(dropOff){
     const p = deliveryPoints.find(x=>Number(x.dropOff)===Number(dropOff));
@@ -972,7 +972,7 @@
     state.pendingOrderClientId = clientId;
     const orderRow = {
       id: clientId,
-      drop_off: state.dropOff, items, total: Math.round(total), status:'received', prep_minutes: prepMinutes, verify_code: genVerifyCode(),
+      drop_off: state.dropOff, items, total: Math.round(total), status:'received', prep_minutes: Math.round(prepMinutes), verify_code: genVerifyCode(),
       comment: comment || null, eta_at: etaAt
     };
     state.placingOrder = true;
