@@ -597,7 +597,7 @@
     return { dropOff: Number(r.drop_off), minutes: Number(r.minutes) };
   }
   function mapOrderRow(r){
-    return { id:r.id, number:r.number, dropOff:r.drop_off, items:r.items, total:Number(r.total), status:r.status,
+    return { id:r.id, number:r.number, dropOff:r.drop_off, items:r.items, total:(r.items||[]).reduce((s,i)=>s+(Number(i.price)||0)*(Number(i.qty)||0),0), status:r.status,
       verifyCode: r.verify_code || null, courierName: r.courier_name || null, comment: r.comment || null,
       createdAt: new Date(r.created_at).getTime(), prepMinutes:r.prep_minutes,
       etaAt: r.eta_at ? new Date(r.eta_at).getTime() : null,
@@ -972,7 +972,7 @@
     state.pendingOrderClientId = clientId;
     const orderRow = {
       id: clientId,
-      drop_off: state.dropOff, items, total, status:'received', prep_minutes: prepMinutes, verify_code: genVerifyCode(),
+      drop_off: state.dropOff, items, total: Math.round(total), status:'received', prep_minutes: prepMinutes, verify_code: genVerifyCode(),
       comment: comment || null, eta_at: etaAt
     };
     state.placingOrder = true;
