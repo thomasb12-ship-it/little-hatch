@@ -289,7 +289,9 @@
 
   .menu-admin-cat{ font-family:var(--font-display); font-weight:700; font-size:16px; margin:16px 0 6px; }
   .menu-admin-cat:first-child{ margin-top:4px; }
-  .menu-admin-row{ display:flex; align-items:center; gap:8px; padding:6px 0; transition:opacity .2s ease, transform .2s ease; }
+  .menu-admin-row{ display:flex; flex-direction:column; gap:6px; padding:6px 0; transition:opacity .2s ease, transform .2s ease; }
+  .menu-admin-row-main{ display:flex; align-items:center; gap:8px; }
+  .menu-admin-row .menu-admin-soldout-msg{ width:100%; box-sizing:border-box; color:var(--ink-2); }
   .menu-admin-row.removing{ opacity:0; transform:translateX(14px) scale(.97); pointer-events:none; }
   .menu-admin-row input[type=text]{ font-size:14px; padding:9px 11px; }
   .menu-admin-row .menu-admin-price{ width:84px; flex:0 0 auto; font-size:14px; padding:9px 8px; }
@@ -1649,6 +1651,7 @@
         return '<div class="menu-admin-cat">'+escapeHtml(cat)+'</div>' +
           items.map((m,idx)=>
             '<div class="menu-admin-row" data-row-id="'+m.id+'">' +
+              '<div class="menu-admin-row-main">' +
               '<div class="reorder-col">' +
                 '<button type="button" class="icon-btn reorder-btn" data-action="move-menu-item" data-id="'+m.id+'" data-dir="up"'+(idx===0?' disabled':'')+' title="Move up">↑</button>' +
                 '<button type="button" class="icon-btn reorder-btn" data-action="move-menu-item" data-id="'+m.id+'" data-dir="down"'+(idx===items.length-1?' disabled':'')+' title="Move down">↓</button>' +
@@ -1656,8 +1659,9 @@
               '<input type="text" class="grow" data-field="name" data-id="'+m.id+'" value="'+escapeHtml(m.name)+'">' +
               '<input type="number" step="0.10" class="menu-admin-price" data-field="price" data-id="'+m.id+'" value="'+m.price.toFixed(2)+'">' +
               '<div class="switch '+(m.available?'on':'')+'" data-action="toggle-stock" data-id="'+m.id+'" data-current="'+m.available+'"><div class="knob"></div></div>' +
-              '<input type="text" class="menu-admin-soldout-msg" data-field="soldout-message" data-id="'+m.id+'" placeholder="Sold out message (optional)" value="'+escapeHtml(m.soldOutMessage||'')+'">' +
               '<button class="icon-btn" data-action="delete-menu-item" data-id="'+m.id+'" title="Remove">×</button>' +
+              '</div>' +
+              '<input type="text" class="menu-admin-soldout-msg" data-field="soldout-message" data-id="'+m.id+'" placeholder="Sold out message (shown to customers when marked sold out)" value="'+escapeHtml(m.soldOutMessage||'')+'">' +
             '</div>' +
             '<div class="menu-admin-toppings-row">' +
               '<input type="text" class="grow" data-field="toppings" data-id="'+m.id+'" placeholder="Add-ons e.g. Milk, Sugar" value="'+escapeHtml((m.toppings||[]).join(', '))+'">' +
