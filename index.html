@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#1a1614">
 <title>The Little Hatch</title>
-<link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAADJElEQVR4nLVXz0r7TBQ9M9MYheKfhcQaBVFcC30AH8Dn8ClcuRHB93DjG7gVt27qzkKVCoLgn6ppo0lmzm/hl9A2yaRqvwOBEO7ce+beuWdyBQDCAiklhBAgv82MMTbzH0PYCAwHtn37C2pVwT3Pw/r6Oj4/P/H29ob7+/upBU/B8UcIQQBsNBp8fHwkSWqtGYYhDw8PCYBKqdy6Xz75j1JKAmCz2SRJGmOYJAlJstVqjZD86yNtqdFag2RWDpJ4fX0F8F2iacBKwBgzEkgIgU6n871QWpdOjNJDOI705Hc6HQghIISAUiqXCWPMj1rVSqDIUb/fB0nEcVy6TikFrfXfCRQ58X0fjuNgZWUFa2tr2Nragu/7UEqh2+3i8vISd3d3P9KL0i7Y3t6m1jrrBJKMooi3t7cMgoBFCIKAR0dHWatO0C3lBDY3NxnH8QiBYcRxzCiKGIYhoyjKbEny5ORkUr0oJ7CxscGvr68cgVQTxmGMoTEmI7KzszPirzCWrTbGmFwdjTFQSuHs7Ax7e3vY3d3FwcEBXl5ech2xv78PoLplSzPg+z4Hg0FODY+Pj3Nrms0m+/1+TjWFEFXnwH4XpIctddputymlpJSStVqNSim6rksAPD09zQ4qSX58fNDzPKt0T1yCVBMuLi5gjIGUEkmSQGsNrTWklGi1WiPr6/U6PM8DUC7dVgKp/g/j+fm50JkxJtMNIURGeH5+/vcEUhLDGAwGpQJTdNhmZ2et/n+cAZvEFu1SKfV7AumlUxUkRVFmquS4ksB4Wm09XXR5VV1Khd7SXSqlcgEnveVS1Gr2G9+agZmZGTiOM3Gw4XSn74uLiwDKS1dILzVeXl6GUipLLUkkSVJKwHXdEd0QQlR2gTU/S0tLIyUQQsB13VL7er2e/Qek5bP9uAAlJUh3cXNzg3a7jV6vhzAM8fT0hOvr6xGb4ffz83O8v7/DcRxordHtdnF1dQWgfKKyTkYA4DgOFhYWMDc3hyAIsr/inKP/dr66uopGo4Fer4eHhweEYWhzP93R7DejXGUG0gM5PBvYMDzMTmJfSeD/xnSmiz/gH3Hd5sjpWNK0AAAAAElFTkSuQmCC">
-<link rel="apple-touch-icon" href="data:image/png;base64,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">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2218%22%20fill%3D%22%23141210%22%2F%3E%3Ctext%20x%3D%2233%22%20y%3D%2247%22%20font-family%3D%22Georgia%2C%20'Times%20New%20Roman'%2C%20serif%22%20font-size%3D%2242%22%20font-weight%3D%22700%22%20fill%3D%22%23ffffff%22%20text-anchor%3D%22middle%22%3Eh%3C%2Ftext%3E%3C%2Fsvg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2218%22%20fill%3D%22%23141210%22%2F%3E%3Ctext%20x%3D%2233%22%20y%3D%2247%22%20font-family%3D%22Georgia%2C%20'Times%20New%20Roman'%2C%20serif%22%20font-size%3D%2242%22%20font-weight%3D%22700%22%20fill%3D%22%23ffffff%22%20text-anchor%3D%22middle%22%3Eh%3C%2Ftext%3E%3C%2Fsvg%3E">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Work+Sans:ital,wght@0,400;0,500;0,600;0,700;1,500&display=swap">
 <link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -150,7 +150,7 @@
 
   .dropoff-input{ font-family:var(--font-display); font-size:64px; font-weight:700; text-align:center; padding:14px; border-radius:var(--radius-m); }
 
-  .cat-tabs{ display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin-bottom:14px; -ms-overflow-style:none; scrollbar-width:none; }
+  .cat-tabs{ display:flex; gap:8px; overflow-x:auto; scroll-behavior:smooth; padding-bottom:4px; margin-bottom:14px; -ms-overflow-style:none; scrollbar-width:none; }
   .cat-tabs::-webkit-scrollbar{ display:none; }
   .cat-tab{ flex:0 0 auto; padding:9px 16px; border-radius:999px; border:2px solid var(--line-strong); font-size:13px; font-weight:700; cursor:pointer; background:var(--paper); white-space:nowrap; transition:transform .15s var(--ease-bounce), background-color .18s ease, color .18s ease, border-color .18s ease; }
   .cat-tab.active{ background:var(--ink); color:var(--paper); border-color:var(--ink); }
@@ -589,7 +589,7 @@
 
   /* ---------------------------- supabase wiring ---------------------------- */
   function mapMenuRow(r){
-    return { id:r.id, name:r.name, category:r.category, price:Number(r.price), available:!!r.available,
+    return { id:r.id, name:r.name, category:r.category, price:Number(r.price), available:!!r.available, soldOutMessage: r.sold_out_message || null,
       sort:r.sort||0, toppings: r.toppings||null, toppingPrice: r.topping_price!=null?Number(r.topping_price):null,
       prepSeconds: r.prep_seconds!=null ? Number(r.prep_seconds) : null };
   }
@@ -1391,7 +1391,7 @@
   function renderMenuItem(item){
     const qty = cartBaseQty(item.id);
     if (!item.available){
-      return '<div class="menu-item soldout"><div class="grow"><div class="name">'+escapeHtml(item.name)+'</div><div class="price">'+money(item.price)+'</div></div><span class="soldout-chip">Sold out</span></div>';
+      return '<div class="menu-item soldout"><div class="grow"><div class="name">'+escapeHtml(item.name)+'</div><div class="price">'+money(item.price)+'</div></div><span class="soldout-chip">'+escapeHtml(item.soldOutMessage||'Sold out')+'</span></div>';
     }
     const hasT = item.toppings && item.toppings.length;
     let toppingsHtml = '';
@@ -1656,6 +1656,7 @@
               '<input type="text" class="grow" data-field="name" data-id="'+m.id+'" value="'+escapeHtml(m.name)+'">' +
               '<input type="number" step="0.10" class="menu-admin-price" data-field="price" data-id="'+m.id+'" value="'+m.price.toFixed(2)+'">' +
               '<div class="switch '+(m.available?'on':'')+'" data-action="toggle-stock" data-id="'+m.id+'" data-current="'+m.available+'"><div class="knob"></div></div>' +
+              '<input type="text" class="menu-admin-soldout-msg" data-field="soldout-message" data-id="'+m.id+'" placeholder="Sold out message (optional)" value="'+escapeHtml(m.soldOutMessage||'')+'">' +
               '<button class="icon-btn" data-action="delete-menu-item" data-id="'+m.id+'" title="Remove">×</button>' +
             '</div>' +
             '<div class="menu-admin-toppings-row">' +
@@ -1999,6 +2000,7 @@
     if (!el || !sb) return;
     const field = el.dataset.field, id = el.dataset.id;
     if (field==='name') await sb.from('menu_items').update({ name: el.value }).eq('id', id);
+    if (field==='soldout-message') await sb.from('menu_items').update({ sold_out_message: el.value.trim() || null }).eq('id', id);
     if (field==='price') await sb.from('menu_items').update({ price: parseFloat(el.value)||0 }).eq('id', id);
     if (field==='toppings'){
       const list = el.value.split(',').map(t=>t.trim()).filter(Boolean);
@@ -2044,7 +2046,25 @@
         else if (state.staff) go('staffMode');
         else go('staffLogin');
         break;
-      case 'set-cat': state.activeCategory = btn.dataset.cat; render(); break;
+      case 'set-cat': {
+        const catTabsEl = document.querySelector('.cat-tabs');
+        const prevScrollLeft = catTabsEl ? catTabsEl.scrollLeft : 0;
+        state.activeCategory = btn.dataset.cat;
+        render();
+        const newCatTabsEl = document.querySelector('.cat-tabs');
+        if (newCatTabsEl) {
+          newCatTabsEl.scrollLeft = prevScrollLeft;
+          const activeTab = newCatTabsEl.querySelector('.cat-tab.active');
+          if (activeTab) {
+            const tabsRect = newCatTabsEl.getBoundingClientRect();
+            const tabRect = activeTab.getBoundingClientRect();
+            if (tabRect.left < tabsRect.left || tabRect.right > tabsRect.right) {
+              activeTab.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+            }
+          }
+        }
+        break;
+      }
       case 'cart-plus': {
         const item = menuItems.find(m=>m.id===btn.dataset.id);
         if (item && item.available){ addToCart(item); popBaseQty(item.id); bumpBasket(); }
