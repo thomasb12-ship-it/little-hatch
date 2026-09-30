@@ -1862,6 +1862,7 @@
     const modes = ['cafe','delivery','both'];
     return topNavStaff({right:'<button class="btn btn-sm" data-action="staff-signout">Sign out</button>'}) +
       '<div class="row between wrap" style="margin-bottom:6px;"><span class="tagline">Signed in as <strong>'+escapeHtml(state.staff.name)+'</strong></span>'+notifBtn+'</div>' +
+      '<p class="tagline" style="margin:0 0 10px;">On iPhone: tap Share, then Add to Home Screen. Open the app from that Home Screen icon (not Safari), then tap the alerts button above and allow notifications so you get a ping when an order comes in.</p>' +
       '<div class="mode-switch">' + modes.map(m=>'<button class="mode-pill '+(state.staffMode===m?'active':'')+'" data-action="set-staff-mode" data-mode="'+m+'">'+cap(m)+'</button>').join('') + '</div>' +
       ((state.staffMode==='cafe'||state.staffMode==='both') ? renderCafeSection() : '') +
       ((state.staffMode==='delivery'||state.staffMode==='both') ? renderDeliverySection() : '') +
