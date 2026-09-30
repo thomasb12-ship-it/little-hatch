@@ -1,0 +1,11 @@
+{
+  "name": "Little Hatch Staff",
+  "short_name": "Hatch Staff",
+  "description": "Staff login and order board for The Little Hatch.",
+  "start_url": "./#staff",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#faf7f2",
+  "theme_color": "#17130f",
+  "orientation": "portrait"
+}
