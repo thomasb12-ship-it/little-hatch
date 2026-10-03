@@ -1113,7 +1113,7 @@
   function staffSignOut(){
     state.staff = null; state.staffMode = null;
     try{ sessionStorage.removeItem('lh_staff'); sessionStorage.removeItem('lh_staff_mode'); }catch(e){}
-    go('landing');
+    go(isStaffUrl() ? 'staffLogin' : 'landing');
   }
   // The logo on any staff screen should always land back on the staff sign-in
   // screen, never out to the customer-facing app — tapping it also clears the
@@ -2040,7 +2040,7 @@
     if (!btn) return;
     const action = btn.dataset.action;
     switch(action){
-      case 'go-landing': go('landing'); break;
+      case 'go-landing': if (isStaffUrl()) { staffLogoTap(); } else { go('landing'); } break;
       case 'staff-logo': staffLogoTap(); break;
       case 'go-dropoff': state.sawBasketPage = false; go('dropoff'); break;
       case 'go-menu': go('menu'); break;
