@@ -219,6 +219,15 @@
   .basket-line .sub{ font-size:12.5px; color:var(--ink-3); }
 
   .dash-header{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:18px; flex-wrap:wrap; }
+  .sync-dot{ width:9px; height:9px; border-radius:50%; display:inline-block; flex:none; }
+  .sync-dot.live{ background:#2ecc71; animation: sync-pulse 2s infinite; }
+  .sync-dot.connecting{ background:#f1c40f; }
+  .sync-dot.offline{ background:#e5484d; }
+  @keyframes sync-pulse{
+    0%{ box-shadow:0 0 0 0 rgba(46,204,113,0.5); }
+    70%{ box-shadow:0 0 0 7px rgba(46,204,113,0); }
+    100%{ box-shadow:0 0 0 0 rgba(46,204,113,0); }
+  }
   .chip{ font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; border:2px solid var(--line-strong); border-radius:999px; padding:3px 11px; }
   .chip.filled{ background:var(--ink); color:var(--paper); border-color:var(--ink); }
   .deliver-timer{ font-variant-numeric:tabular-nums; }
@@ -600,7 +609,7 @@
   }
   function mapOrderRow(r){
     return { id:r.id, number:r.number, dropOff:r.drop_off, items:r.items, total:(r.items||[]).reduce((s,i)=>s+(Number(i.price)||0)*(Number(i.qty)||0),0), status:r.status,
-      verifyCode: r.verify_code || null, courierName: r.courier_name || null, comment: r.comment || null,
+      verifyCode: r.verify_code || null, customerName: r.customer_name || null, courierName: r.courier_name || null, comment: r.comment || null,
       createdAt: new Date(r.created_at).getTime(), prepMinutes:r.prep_minutes,
       etaAt: r.eta_at ? new Date(r.eta_at).getTime() : null,
       preparingStartedAt: r.preparing_started_at ? new Date(r.preparing_started_at).getTime() : null,
@@ -653,6 +662,7 @@
   }
 
   function subscribeRealtime(){
+    state.syncStatus = 'connecting';
     // Every one of these fires constantly during normal use — a customer
     // placing an order, staff advancing one, a menu/timings/shop-toggle edit
     // (including the admin's own, bouncing back from the database) — so a
@@ -664,6 +674,7 @@
         if (payload.eventType==='DELETE'){ orders = orders.filter(o=>o.id!==payload.old.id); }
         else { upsertOrderLocal(payload.new); }
         handleOrderAlerts();
+        state.lastSyncAt = Date.now();
         renderQuiet();
       })
       .on('postgres_changes', {event:'*', schema:'public', table:'menu_items'}, payload=>{
@@ -674,6 +685,7 @@
           if (i>=0) menuItems[i]=mapped; else menuItems.push(mapped);
           menuItems.sort((a,b)=>a.sort-b.sort);
         }
+        state.lastSyncAt = Date.now();
         renderQuiet();
       })
       .on('postgres_changes', {event:'*', schema:'public', table:'settings'}, payload=>{
@@ -686,6 +698,7 @@
             toppingPrepSeconds: payload.new.topping_prep_seconds!=null ? payload.new.topping_prep_seconds : 5
           };
         }
+        state.lastSyncAt = Date.now();
         renderQuiet();
       })
       .on('postgres_changes', {event:'*', schema:'public', table:'delivery_points'}, payload=>{
@@ -695,11 +708,24 @@
           const i = deliveryPoints.findIndex(p=>p.dropOff===mapped.dropOff);
           if (i>=0) deliveryPoints[i]=mapped; else deliveryPoints.push(mapped);
         }
+        state.lastSyncAt = Date.now();
         renderQuiet();
       })
-      .subscribe();
+      .subscribe(function(status){
+        if (status==='SUBSCRIBED'){ state.syncStatus = 'live'; }
+        else if (status==='CLOSED' || status==='CHANNEL_ERROR' || status==='TIMED_OUT'){ state.syncStatus = 'offline'; }
+        else { state.syncStatus = 'connecting'; }
+        renderQuiet();
+      });
   }
 
+  function syncStatusLabel(){
+    if (state.syncStatus==='live'){
+      return state.lastSyncAt ? ('Live — last update ' + new Date(state.lastSyncAt).toLocaleTimeString()) : 'Live — watching for new orders';
+    }
+    if (state.syncStatus==='offline') return 'Offline — not receiving live updates';
+    return 'Connecting…';
+  }
   function handleOrderAlerts(){
     const isFirst = firstOrdersSnapshot;
     const trackedIds = getTrackedOrderIds();
@@ -975,6 +1001,7 @@
     const orderRow = {
       id: clientId,
       drop_off: state.dropOff, items, total: Math.round(total), status:'received', prep_minutes: Math.round(prepMinutes), verify_code: genVerifyCode(),
+      customer_name: state.customerName || null,
       comment: comment || null, eta_at: etaAt
     };
     state.placingOrder = true;
@@ -986,6 +1013,12 @@
       // either creates the row once, or (if the first attempt actually did
       // go through despite the error) quietly no-ops onto it.
       orderRow.verify_code = genVerifyCode();
+      // The customer_name column may not exist yet on older deployments
+      // mid-rollout -- if that's why the first attempt failed, drop it and
+      // retry rather than failing the whole order over a missing column.
+      if ('customer_name' in orderRow && error && (error.code==='42703' || /customer_name/.test(error.message||error.details||''))){
+        delete orderRow.customer_name;
+      }
       ({ data, error } = await withTimeout(sb.from('orders').upsert(orderRow).select().single(), 8000).catch(e=>({data:null, error:e})));
     }
     if (error){
@@ -1382,14 +1415,14 @@
     return topNav({right:'<button class="btn btn-sm" data-action="go-landing">Cancel</button>'}) +
       orderingStepper(0) +
       '<h2 style="margin-bottom:4px;">Where should we bring it?</h2>' +
-      '<p class="tagline" style="margin-bottom:6px;">Enter your drop off point number ('+DROP_MIN+'–'+DROP_MAX+').</p>' +
-      '<form id="dropoff-form" class="stack '+(state.dropoffError?'shake':'')+'" style="max-width:220px;margin:18px auto 0;">' +
+      '<p class="tagline" style="margin-bottom:6px;">Enter your drop off point number ('+DROP_MIN+'–'+DROP_MAX+') and your name so we know who to bring it to.</p>' +
+      '<form id="dropoff-form" class="stack '+(state.dropoffError?'shake':'')+'" style="max-width:260px;margin:18px auto 0;">' +
         '<input type="text" inputmode="numeric" id="dropoff-input" class="dropoff-input" maxlength="1" placeholder="-" autofocus>' +
+        '<div class="field" style="margin-top:14px;"><label for="dropoff-name-input">Your name</label><input type="text" id="dropoff-name-input" maxlength="40" autocomplete="off" value="'+escapeHtml(state.customerName||'')+'"></div>' +
         (state.dropoffError ? '<div class="error-text center">'+state.dropoffError+'</div>' : '') +
-        '<button type="submit" class="btn btn-primary btn-lg btn-block">Continue</button>' +
+        '<button type="submit" class="btn btn-primary btn-lg btn-block" style="margin-top:14px;">Continue</button>' +
       '</form>';
   }
-
   function renderMenuItem(item){
     const qty = cartBaseQty(item.id);
     if (!item.available){
@@ -1562,12 +1595,12 @@
     // Once an order is out for delivery, the courier needs to match the
     // customer's spoken code at a glance — so it gets its own large,
     // impossible-to-misread line instead of the small corner chip.
-    const bigCode = (order.status==='delivering' && order.verifyCode)
-      ? '<div class="center" style="margin:6px 0 2px;"><div class="verify-code-ticket mono">'+order.verifyCode+'</div></div>'
+    const bigCode = (order.status==='delivering' && (order.customerName || order.verifyCode))
+      ? '<div class="center" style="margin:6px 0 2px;"><div class="verify-code-ticket'+(order.customerName?'':' mono')+'">'+escapeHtml(order.customerName||order.verifyCode)+'</div></div>'
       : '';
     return '<div class="ticket-mini" data-action="view-order" data-id="'+order.id+'">' +
       '<div class="row between wrap" style="row-gap:6px;"><span class="order-num">#'+order.number+'</span><span class="row wrap" style="gap:6px;row-gap:6px;">'+
-        '<span class="chip">Point '+order.dropOff+'</span>'+(order.verifyCode?'<span class="verify-chip">'+order.verifyCode+'</span>':'')+deliverTimer+
+        '<span class="chip">Point '+order.dropOff+'</span>'+(order.customerName?'<span class="chip">'+escapeHtml(order.customerName)+'</span>':(order.verifyCode?'<span class="verify-chip">'+order.verifyCode+'</span>':''))+deliverTimer+
       '</span></div>' +
       '<div class="order-meta">'+itemCount+' item'+(itemCount>1?'s':'')+' · '+money(order.total)+' · <span class="waited">'+timeSince(order.createdAt)+'</span></div>' +
       bigCode +
@@ -1626,7 +1659,7 @@
     const pool = [...ready, ...delivering].sort((a,b)=>a.createdAt-b.createdAt);
     const filtered = state.deliveryFilter && state.deliveryFilter!=='all' ? pool.filter(o=>String(o.dropOff)===String(state.deliveryFilter)) : pool;
     const pts = []; for (let n=DROP_MIN;n<=DROP_MAX;n++) pts.push(n);
-    return '<div class="dash-header" style="margin-top:28px;"><h2>Delivery</h2><span class="chip filled">'+ready.length+' ready</span></div>' +
+    return '<div class="dash-header" style="margin-top:28px;"><div class="row"><h2>Delivery</h2><span class="sync-dot '+(state.syncStatus||'connecting')+'" title="'+escapeHtml(syncStatusLabel())+'"></span></div><span class="chip filled">'+ready.length+' ready</span></div>' +
       '<div class="dropoff-tabs">' +
         '<div class="cat-tab '+(!state.deliveryFilter||state.deliveryFilter==='all'?'active':'')+'" data-action="set-delivery-filter" data-f="all">All points</div>' +
         pts.map(n=>'<div class="cat-tab '+(String(state.deliveryFilter)===String(n)?'active':'')+'" data-action="set-delivery-filter" data-f="'+n+'">Point '+n+'</div>').join('') +
@@ -1984,14 +2017,17 @@
     e.preventDefault();
     const val = document.getElementById('dropoff-input').value.trim();
     const n = parseInt(val,10);
+    const nameVal = document.getElementById('dropoff-name-input').value.trim();
     if (!val || isNaN(n) || n<DROP_MIN || n>DROP_MAX){
       state.dropoffError = 'Enter a number between '+DROP_MIN+' and '+DROP_MAX+'.';
       render();
+    } else if (!nameVal){
+      state.dropoffError = 'Please enter your name.';
+      render();
     } else {
-      go('menu', { dropOff:n, dropoffError:null });
+      go('menu', { dropOff:n, customerName:nameVal, dropoffError:null });
     }
   }
-
   async function onStaffLoginSubmit(e){
     e.preventDefault();
     const name = document.getElementById('staff-name-input').value.trim();
