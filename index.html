@@ -219,15 +219,13 @@
   .basket-line .sub{ font-size:12.5px; color:var(--ink-3); }
 
   .dash-header{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:18px; flex-wrap:wrap; }
-  .sync-dot{ width:9px; height:9px; border-radius:50%; display:inline-block; flex:none; }
-  .sync-dot.live{ background:#2ecc71; animation: sync-pulse 2s infinite; }
-  .sync-dot.connecting{ background:#f1c40f; }
-  .sync-dot.offline{ background:#e5484d; }
-  @keyframes sync-pulse{
-    0%{ box-shadow:0 0 0 0 rgba(46,204,113,0.5); }
-    70%{ box-shadow:0 0 0 7px rgba(46,204,113,0); }
-    100%{ box-shadow:0 0 0 0 rgba(46,204,113,0); }
-  }
+  #sync-bar{ position:fixed; top:env(safe-area-inset-top,0px); left:0; right:0; height:5px; z-index:9999; pointer-events:none; display:none; background:rgba(0,0,0,0.05); }
+  #sync-bar.on{ display:block; }
+  #sync-bar .sync-thumb{ position:absolute; top:0; left:0; height:5px; width:72px; border-radius:0 0 5px 5px; background:#2ecc71; animation:sync-sweep 5s linear infinite alternate; }
+  #sync-bar.connecting .sync-thumb{ background:#f1c40f; }
+  #sync-bar.offline .sync-thumb{ background:#e5484d; }
+  @keyframes sync-sweep{ from{ left:0; } to{ left:calc(100% - 72px); } }
+  .verify-code-big.name-big{ font-size:clamp(26px,9vw,40px); letter-spacing:.01em; white-space:normal; word-break:break-word; }
   .chip{ font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; border:2px solid var(--line-strong); border-radius:999px; padding:3px 11px; }
   .chip.filled{ background:var(--ink); color:var(--paper); border-color:var(--ink); }
   .deliver-timer{ font-variant-numeric:tabular-nums; }
@@ -1415,10 +1413,10 @@
     return topNav({right:'<button class="btn btn-sm" data-action="go-landing">Cancel</button>'}) +
       orderingStepper(0) +
       '<h2 style="margin-bottom:4px;">Where should we bring it?</h2>' +
-      '<p class="tagline" style="margin-bottom:6px;">Enter your drop off point number ('+DROP_MIN+'–'+DROP_MAX+') and your name so we know who to bring it to.</p>' +
+      '<p class="tagline" style="margin-bottom:6px;">Enter your drop off point number ('+DROP_MIN+'–'+DROP_MAX+') and your name so we know where to bring your order and who it belongs to.</p>' +
       '<form id="dropoff-form" class="stack '+(state.dropoffError?'shake':'')+'" style="max-width:260px;margin:18px auto 0;">' +
         '<input type="text" inputmode="numeric" id="dropoff-input" class="dropoff-input" maxlength="1" placeholder="-" autofocus>' +
-        '<div class="field" style="margin-top:14px;"><label for="dropoff-name-input">Your name</label><input type="text" id="dropoff-name-input" maxlength="40" autocomplete="off" value="'+escapeHtml(state.customerName||'')+'"></div>' +
+        '<div class="field" style="margin-top:14px;"><label for="dropoff-name-input">Your name</label><div style="font-size:13px;color:var(--ink-3);margin:2px 0 8px;line-height:1.35;">We put your name on your order so the delivery person knows it is yours when we bring it over.</div><input type="text" id="dropoff-name-input" maxlength="40" autocomplete="off" value="'+escapeHtml(state.customerName||'')+'"></div>' +
         (state.dropoffError ? '<div class="error-text center">'+state.dropoffError+'</div>' : '') +
         '<button type="submit" class="btn btn-primary btn-lg btn-block" style="margin-top:14px;">Continue</button>' +
       '</form>';
@@ -1528,7 +1526,7 @@
       '<div class="ticket">' +
         '<div class="row" style="margin-bottom:10px;"><span class="chip">Drop off point '+order.dropOff+'</span></div>' +
         '<div class="center" style="margin-bottom:14px;"><span class="order-num-badge">#'+order.number+'</span></div>' +
-        (order.verifyCode ? '<div class="center" style="margin-bottom:16px;"><div class="verify-label">Your code</div><div class="verify-code-big">'+order.verifyCode+'</div></div>' : '') +
+        (order.customerName ? '<div class="center" style="margin-bottom:16px;"><div class="verify-label">Order for</div><div class="verify-code-big name-big">'+escapeHtml(order.customerName)+'</div></div>' : '') +
         '<div class="center timer-block">' +
           '<div class="timer-big mono'+(info.mode==='late'?' late':'')+'" id="lh-timer">'+tb.big+'</div>' +
           '<div class="timer-caption'+(info.mode==='late'?' late':'')+'" id="lh-timer-caption">'+tb.caption+'</div>' +
@@ -1659,7 +1657,7 @@
     const pool = [...ready, ...delivering].sort((a,b)=>a.createdAt-b.createdAt);
     const filtered = state.deliveryFilter && state.deliveryFilter!=='all' ? pool.filter(o=>String(o.dropOff)===String(state.deliveryFilter)) : pool;
     const pts = []; for (let n=DROP_MIN;n<=DROP_MAX;n++) pts.push(n);
-    return '<div class="dash-header" style="margin-top:28px;"><div class="row"><h2>Delivery</h2><span class="sync-dot '+(state.syncStatus||'connecting')+'" title="'+escapeHtml(syncStatusLabel())+'"></span></div><span class="chip filled">'+ready.length+' ready</span></div>' +
+    return '<div class="dash-header" style="margin-top:28px;"><div class="row"><h2>Delivery</h2></div><span class="chip filled">'+ready.length+' ready</span></div>' +
       '<div class="dropoff-tabs">' +
         '<div class="cat-tab '+(!state.deliveryFilter||state.deliveryFilter==='all'?'active':'')+'" data-action="set-delivery-filter" data-f="all">All points</div>' +
         pts.map(n=>'<div class="cat-tab '+(String(state.deliveryFilter)===String(n)?'active':'')+'" data-action="set-delivery-filter" data-f="'+n+'">Point '+n+'</div>').join('') +
@@ -1929,7 +1927,47 @@
     cartOnlyRender = false;
     window.scrollTo(0, scrollY);
   }
+  var syncBusy = false, syncSig = '';
+  function updateSyncBar(){
+    let bar = document.getElementById('sync-bar');
+    if (!bar){
+      bar = document.createElement('div'); bar.id = 'sync-bar';
+      bar.innerHTML = '<div class="sync-thumb"></div>';
+      document.body.appendChild(bar);
+      const thumb = bar.firstChild;
+      thumb.addEventListener('animationiteration', function(){ refreshOrdersQuiet(); });
+    }
+    const show = !!state.staff && state.view !== 'staffLogin';
+    bar.classList.toggle('on', show);
+    const st = state.pollOk === false ? 'offline' : (state.syncStatus || 'connecting');
+    bar.classList.toggle('connecting', st === 'connecting');
+    bar.classList.toggle('offline', st === 'offline');
+    bar.title = syncStatusLabel();
+  }
+  async function refreshOrdersQuiet(){
+    if (syncBusy || !sb || !state.staff || state.view === 'staffLogin') return;
+    syncBusy = true;
+    try{
+      const res = await sb.from('orders').select('*').order('created_at');
+      if (res && !res.error && res.data){
+        state.pollOk = true;
+        state.lastSyncAt = Date.now();
+        const sig = JSON.stringify(res.data);
+        if (sig !== syncSig){
+          syncSig = sig;
+          orders = res.data.map(mapOrderRow);
+          handleOrderAlerts();
+          const ae = document.activeElement;
+          const typing = ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName);
+          if (!typing) renderQuiet();
+        }
+      } else { state.pollOk = false; }
+    }catch(e){ state.pollOk = false; }
+    syncBusy = false;
+    updateSyncBar();
+  }
   function render(navEntrance){
+    updateSyncBar();
     const app = document.getElementById('app');
     app.classList.remove('wide');
     if (cartOnlyRender) app.classList.add('no-row-anim'); else app.classList.remove('no-row-anim');
